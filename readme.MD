@@ -7,37 +7,17 @@
 
 По сути, это `FrameworkBundle` с наполовину выпиленным функционалом (не нужным в кастомных сборках) - формы, workflow, translators & и т.п.
 
+## Установка
+
+```bash
+composer require proklung/core-framework-extension-bundle
+```
+
 ## Конфигурационный файл
 
 По адресу `local/packages/framework.yaml`
 
-## Консольные команды
-
-Стандартные:
-
-- `debug:router`
-- `router:match`
-- `debug:event-dispatcher`
-- `debug:container`
-- `debug:autowiring`
-- `config:dump-reference`
-
-## Расширения
-
-Любое расширение может быть отключено проставлением `false` параметру `enabled` соответствующего раздела файла
-`framework.yaml`.
-
-### DBAL
-
-### Validator
-
-### Cache
-
-### Serializer
-
-### Secrets
-
-Пример файла `framework.yaml`:
+Пример:
 
 ```yaml
 framework:
@@ -99,3 +79,29 @@ framework:
   property_access:
     enabled: true
 ```
+
+## Консольные команды
+
+Стандартные:
+
+- `debug:router`
+- `router:match`
+- `debug:event-dispatcher`
+- `debug:container`
+- `debug:autowiring`
+- `config:dump-reference`
+
+## Расширения
+
+Любое расширение может быть отключено проставлением `false` параметру `enabled` соответствующего раздела файла
+`framework.yaml`.
+
+### DBAL
+
+### Validator
+
+### Cache
+
+### Serializer
+
+### Secrets
