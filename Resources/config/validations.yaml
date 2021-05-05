@@ -1,0 +1,33 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  validator:
+    class: Symfony\Component\Validator\Validator\ValidatorInterface
+    factory: ['@validator.builder', 'getValidator']
+
+  Symfony\Component\Validator\Validator\ValidatorInterface: '@validator'
+  validator.mapping.class_metadata_factory: '@validator'
+
+  validator.validator_factory:
+    class: Symfony\Component\Validator\ContainerConstraintValidatorFactory
+    arguments: []
+
+  validator.builder:
+    class: Symfony\Component\Validator\ValidatorBuilder
+    factory: ['Symfony\Component\Validator\Validation', 'createValidatorBuilder']
+    calls:
+      - setConstraintValidatorFactory: ['@validator.validator_factory']
+
+  validator.expression:
+    class: Symfony\Component\Validator\Constraints\ExpressionValidator
+    tags:
+      - { name: validator.constraint_validator, alias: validator.expression }
+
+  validator.email:
+    class: Symfony\Component\Validator\Constraints\EmailValidator
+    arguments: ['loose']
+    tags:
+      - { name: validator.constraint_validator, alias: Symfony\Component\Validator\Constraints\EmailValidator }

@@ -1,0 +1,20 @@
+####################
+# PropertyAccessor
+###################
+
+services:
+  # конфигурация по умолчанию в *этом* файле
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  property_accessor:
+    class: Symfony\Component\PropertyAccess\PropertyAccessor
+    arguments:
+      - ''
+      - ''
+      - '@cache.property_access'
+      - ''
+
+  Symfony\Component\PropertyAccess\PropertyAccessorInterface: '@property_accessor'

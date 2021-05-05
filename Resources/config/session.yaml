@@ -1,0 +1,86 @@
+###########
+# Session
+###########
+parameters:
+  session.metadata.storage_key: '_sf2_meta'
+
+services:
+  # конфигурация по умолчанию в *этом* файле
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  # Сессии Symfony.
+  session.symfony:
+    class: Prokl\CustomFrameworkExtensionsBundle\Services\SymfonySessionMigrator
+    tags: ['service.bootstrap']
+
+  Prokl\CustomFrameworkExtensionsBundle\Services\SymfonySessionMigrator: '@session.symfony'
+
+  session.instance:
+    class: Symfony\Component\HttpFoundation\Session\Session
+    factory: ['@session.symfony', 'session']
+
+  Symfony\Component\HttpFoundation\Session\SessionInterface: '@session.instance'
+
+  #########
+  # Native
+  #########
+
+  session:
+    class: Symfony\Component\HttpFoundation\Session\Session
+    arguments:
+      - '@session.storage'
+
+  Symfony\Component\HttpFoundation\Session\Storage\SessionStorageInterface: '@session.storage'
+
+  session.storage.metadata_bag:
+    class : Symfony\Component\HttpFoundation\Session\Storage\MetadataBag
+    arguments:
+      - '%session.metadata.storage_key%'
+      - '%session.metadata.update_threshold%'
+
+  session.storage.native:
+    class: Symfony\Component\HttpFoundation\Session\Storage\NativeSessionStorage
+    arguments:
+      - '%session.storage.options%'
+      - '@session.handler'
+      - '@session.storage.metadata_bag'
+
+  session.storage.php_bridge:
+    class: Symfony\Component\HttpFoundation\Session\Storage\PhpBridgeSessionStorage
+    arguments:
+      - '@session.handler'
+      - '@session.storage.metadata_bag'
+
+#  session.flash_bag:
+#    class: Symfony\Component\HttpFoundation\Session\Flash\FlashBag
+#    factory: ['@session', 'getFlashBag']
+#
+#  Symfony\Component\HttpFoundation\Session\Flash\FlashBagInterface: '@session.flash_bag'
+
+  session.attribute_bag:
+    class: Symfony\Component\HttpFoundation\Session\Attribute\AttributeBag
+    factory: ['@session', 'getBag']
+    arguments:
+      - ''
+
+  session.storage.mock_file:
+    class: Symfony\Component\HttpFoundation\Session\Storage\MockFileSessionStorage
+    arguments:
+      - '%kernel.cache_dir%/sessions'
+      - 'MOCKSESSID'
+      - '@session.storage.metadata_bag'
+
+  Symfony\Component\HttpFoundation\Session\Storage\Handler\NativeFileSessionHandler: ~
+
+  session.handler.native_file:
+    class: Symfony\Component\HttpFoundation\Session\Storage\Handler\StrictSessionHandler
+    arguments:
+      - '@Symfony\Component\HttpFoundation\Session\Storage\Handler\NativeFileSessionHandler'
+      - '%session.save_path%'
+
+#  session.abstract_handler:
+#    class: Symfony\Component\HttpFoundation\Session\Storage\Handler\AbstractSessionHandler
+#    factory: ['Symfony\Component\HttpFoundation\Session\Storage\Handler\SessionHandlerFactory', 'createHandler']

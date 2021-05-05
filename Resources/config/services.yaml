@@ -1,0 +1,22 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  # Компонент управления консольными командами.
+  Symfony\Component\Console\Application:
+    class: Symfony\Component\Console\Application
+    calls:
+      - setName: ['Bitrix console interface']
+      - setVersion: ['1.0.0']
+
+  Symfony\Bundle\FrameworkBundle\Console\Application:
+    arguments: ['@kernel']
+
+  # Менеджер консольных команд.
+  console.command.manager:
+    class: Prokl\CustomFrameworkExtensionsBundle\Services\Console\ConsoleCommandConfigurator
+    arguments:
+      - '@Symfony\Component\Console\Application'
+      - '@service_container'

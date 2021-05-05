@@ -1,0 +1,72 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  ##############
+  # HTTP client
+  #############
+
+  http_client:
+    class: Symfony\Contracts\HttpClient\HttpClientInterface
+    factory: ['Symfony\Component\HttpClient\HttpClient', 'create']
+
+  Symfony\Contracts\HttpClient\HttpClientInterface: '@http_client'
+
+  psr18.http_client:
+    class: Symfony\Component\HttpClient\Psr18Client
+    arguments: ['@http_client']
+
+  Psr\Http\Client\ClientInterface: '@psr18.http_client'
+
+  Symfony\Component\HttpClient\HttplugClient:
+    class: Symfony\Component\HttpClient\HttplugClient
+    arguments: ['@http_client']
+
+  request_stack:
+    class: Symfony\Component\HttpFoundation\RequestStack
+
+  Symfony\Component\HttpFoundation\RequestStack: '@request_stack'
+
+  mime_types:
+    class: Symfony\Component\Mime\MimeTypes
+    calls:
+      - setDefault: ['@mime_types']
+
+  container.getenv:
+    class: Closure
+    factory: ['Closure', 'fromCallable']
+    arguments:
+      - ['@service_container', 'getEnv']
+
+  container.env:
+    class: Symfony\Component\String\LazyString
+    factory: ['Symfony\Component\String\LazyString', 'fromCallable']
+    arguments: ['@container.getenv']
+
+  http_kernel:
+    class: Symfony\Component\HttpKernel\HttpKernel
+    arguments:
+      - '@event_dispatcher'
+      - '@controller_resolver'
+      - '@request_stack'
+      - '@argument_resolver'
+
+    tags:
+      - { name: container.hot_path }
+
+  Symfony\Component\HttpKernel\HttpKernelInterface: '@http_kernel'
+
+  Symfony\Component\ExpressionLanguage\ExpressionLanguage: ~
+
+  # Должно быть активировано расширение PHP intl!
+  slugger:
+    class: Symfony\Component\String\Slugger\AsciiSlugger
+    arguments: ['%kernel.default_locale%']
+    tags: ['kernel.locale_aware']
+
+  Symfony\Component\String\Slugger\SluggerInterface: '@slugger'
+
+  Symfony\Component\HttpKernel\Controller\ContainerControllerResolver:
+    arguments: ['@service_container']

@@ -1,0 +1,37 @@
+<?php
+
+namespace Local\Tests\%namespace%;
+
+use Local\%path.class%;
+use Local\Tests\PhpUnitExtensions\BaseTestCase;
+
+/**
+ * Class %class%Test
+ * @package Local\Tests\%namespace%
+ * @coversDefaultClass %class%
+ *
+ * @since %date%
+ */
+class %class%Test extends BaseTestCase
+{
+    /**
+     * @var %class% $obTestObject Тестируемый объект.
+     */
+    protected $obTestObject;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->obTestObject = new %class%();
+    }
+
+    /**
+    * Метод.
+    *
+    * @return void
+    */
+    public function testMethod() : void
+    {
+
+    }
+}
