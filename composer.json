@@ -2,6 +2,7 @@
   "name": "proklung/core-framework-extension-bundle",
   "description": "Core framework bundle for custom Symfony",
   "type": "symfony-bundle",
+  "license": "MIT",
   "authors": [
     {
       "name": "Gavrilov Fedy",
