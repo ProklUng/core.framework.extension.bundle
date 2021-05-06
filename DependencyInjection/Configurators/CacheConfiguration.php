@@ -42,7 +42,10 @@ class CacheConfiguration
             $container->removeDefinition('cache.default_marshaller');
         }
 
-        $version = new Parameter($container->hasParameter('container.build_id') ? 'container.build_id' : '');
+        if (!$container->hasParameter('container.build_id')) {
+            $container->setParameter('container.build_id', 'a fake build id');
+        }
+        $version = new Parameter('container.build_id');
 
         $container->getDefinition('cache.adapter.apcu')->replaceArgument(2, $version);
         $container->getDefinition('cache.adapter.system')->replaceArgument(2, $version);
