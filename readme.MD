@@ -9,6 +9,17 @@
 
 ## Установка
 
+composer.json:
+
+```json
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/proklung/core.framework.extension.bundle"
+        }
+    ],
+```
+
 ```bash
 composer require proklung/core-framework-extension-bundle
 ```
@@ -48,9 +59,9 @@ framework:
     connections:
         default:
           url: "%env(DATABASE_URL)%"
-          dbname:           bitrix.loc
-          user:             root
-          password:         null
+          dbname:           '%env(DB_NAME)%'
+          user:             '%env(DB_USER)%'
+          password:         '%env(DB_PASSWORD)%'
           host:             localhost
           mapping_types:
             enum: string
