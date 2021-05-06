@@ -17,7 +17,7 @@ composer.json:
             "type": "git",
             "url": "https://github.com/proklung/core.framework.extension.bundle"
         }
-    ],
+    ]
 ```
 
 ```bash
