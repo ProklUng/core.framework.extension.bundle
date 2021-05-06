@@ -164,11 +164,6 @@ class CustomFrameworkExtensionsExtension extends Extension
             // Added explicitly so that we don't rely on the class map being dumped to make it work
             'Symfony\\Bundle\\FrameworkBundle\\Controller\\AbstractController',
         ]);
-
-        if (!$container->getParameter('kernel.debug')) {
-            // remove tagged iterator argument for resource checkers
-            $container->getDefinition('config_cache_factory')->setArguments([]);
-        }
     }
 
     /**
