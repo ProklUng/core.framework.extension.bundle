@@ -76,6 +76,7 @@ class CustomFrameworkExtensionsExtension extends Extension
         $loader->load('property_extractor.yaml');
         $loader->load('property_info.yaml');
         $loader->load('stuff.yaml');
+        $loader->load('filesystem.yaml');
 
         if (!empty($config['cache']) && $config['cache']['enabled'] === true) {
             $loader->load('cache.yaml');

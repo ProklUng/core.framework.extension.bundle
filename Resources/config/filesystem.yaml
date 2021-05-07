@@ -1,0 +1,19 @@
+#############
+# Filesystem
+#############
+
+services:
+  # конфигурация по умолчанию в *этом* файле
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  Symfony\Component\Filesystem\Filesystem: ~
+
+  filesystem: '@Symfony\Component\Filesystem\Filesystem'
+  file_system: '@Symfony\Component\Filesystem\Filesystem'
+
+  file_locator:
+    class: Symfony\Component\HttpKernel\Config\FileLocator
+    arguments: ['@kernel']
