@@ -4,7 +4,6 @@ namespace Prokl\CustomFrameworkExtensionsBundle\Services\Console;
 
 use Exception;
 use IteratorAggregate;
-use Local\ServiceProvider\Bundles\BundlesLoader;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Exception\CommandNotFoundException;
@@ -122,7 +121,7 @@ class ConsoleCommandConfigurator
      */
     private function registerCommands() : void
     {
-        $bundles = BundlesLoader::getBundlesMap();
+        $bundles = (array)$this->container->getParameter('kernel.bundles');
 
         foreach ($bundles as $bundle) {
             if ($bundle instanceof Bundle) {

@@ -26,7 +26,7 @@ composer require proklung/core-framework-extension-bundle
 
 ## Конфигурационный файл
 
-По адресу `local/packages/framework.yaml`
+По адресу `local/packages/framework.yaml` (или `/config/packages/framework.yaml` для Wordpress).
 
 Пример:
 
