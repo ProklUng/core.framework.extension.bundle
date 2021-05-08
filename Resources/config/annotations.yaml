@@ -2,10 +2,6 @@
 # Аннотации
 ############
 
-parameters:
-  annotations.cache_ttl_default: 3600
-  file_cache_dir: '%kernel.cache_dir%/annotations'
-
 services:
   # конфигурация по умолчанию в *этом* файле
   _defaults:
@@ -31,7 +27,7 @@ services:
     class: Symfony\Component\Cache\Adapter\FilesystemAdapter
     arguments:
       - 'annotations'
-      - '%annotations.cache_ttl_default%'
+      - '%annotations_ttl_cache%'
       - '%file_cache_dir%'
 
   annotations.filesystem_cache:

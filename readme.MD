@@ -82,6 +82,7 @@ framework:
     enabled: true
     file_cache_dir: '%kernel.cache_dir%/annotations'
     cache: 'file'
+    annotations_ttl_cache: 7200
 
   session:
     enabled: true

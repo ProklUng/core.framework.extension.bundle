@@ -257,6 +257,7 @@ class CustomFrameworkExtensionsExtension extends Extension
             $cacheService = $config['cache'];
 
             $container->getParameterBag()->set('file_cache_dir', $config['file_cache_dir']);
+            $container->getParameterBag()->set('annotations_ttl_cache', $config['ttl_cache']);
 
             if ('php_array' === $config['cache']) {
                 $cacheService = 'annotations.cache';
