@@ -4,6 +4,7 @@
 
 parameters:
   annotations.cache_ttl_default: 3600
+  file_cache_dir: '%kernel.cache_dir%/annotations'
 
 services:
   # конфигурация по умолчанию в *этом* файле
