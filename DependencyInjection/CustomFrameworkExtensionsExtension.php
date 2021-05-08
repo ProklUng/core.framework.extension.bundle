@@ -10,6 +10,7 @@ use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\Prop
 use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\SecretConfigurator;
 use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\SerializerConfigurator;
 use Prokl\CustomFrameworkExtensionsBundle\Extra\DoctrineDbalExtension;
+use RuntimeException;
 use Symfony\Bridge\Twig\Extension\CsrfExtension;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Alias;
@@ -261,7 +262,7 @@ class CustomFrameworkExtensionsExtension extends Extension
                 $cacheDir = $container->getParameterBag()->resolveValue($config['file_cache_dir']);
 
                 if (!is_dir($cacheDir) && false === @mkdir($cacheDir, 0777, true) && !is_dir($cacheDir)) {
-                    throw new \RuntimeException(sprintf('Could not create cache directory "%s".', $cacheDir));
+                    throw new RuntimeException(sprintf('Could not create cache directory "%s".', $cacheDir));
                 }
 
                 $container

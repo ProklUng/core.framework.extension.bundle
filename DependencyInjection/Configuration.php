@@ -71,7 +71,7 @@ final class Configuration implements ConfigurationInterface
     /**
      * Csrf.
      *
-     * @param ArrayNodeDefinition $arrayNodeDefinition Node.
+     * @param ArrayNodeDefinition $rootNode Node.
      *
      * @return void
      */
@@ -96,7 +96,7 @@ final class Configuration implements ConfigurationInterface
     /**
      * Annotations.
      *
-     * @param ArrayNodeDefinition $arrayNodeDefinition Node.
+     * @param ArrayNodeDefinition $rootNode Node.
      *
      * @return void
      */
@@ -110,7 +110,7 @@ final class Configuration implements ConfigurationInterface
             ->children()
             ->scalarNode('cache')->defaultValue(interface_exists(Cache::class) ? 'php_array' : 'none')->end()
             ->scalarNode('file_cache_dir')->defaultValue('%kernel.cache_dir%/annotations')->end()
-            ->booleanNode('debug')->defaultValue($this->debug)->end()
+            ->booleanNode('debug')->defaultValue('%kernel.debug%')->end()
             ->end()
             ->end()
             ->end()
@@ -142,6 +142,11 @@ final class Configuration implements ConfigurationInterface
         ;
     }
 
+    /**
+     * @param ArrayNodeDefinition $rootNode Node.
+     *
+     * @return void
+     */
     private function addPropertyInfoSection(ArrayNodeDefinition $rootNode)
     {
         $rootNode
@@ -306,7 +311,7 @@ final class Configuration implements ConfigurationInterface
     }
 
     /**
-     * @param ArrayNodeDefinition $rootNode
+     * @param ArrayNodeDefinition $rootNode Node.
      *
      * @return void
      */

@@ -31,7 +31,7 @@ services:
     arguments:
       - 'annotations'
       - '%annotations.cache_ttl_default%'
-      - '%kernel.project_dir%/bitrix/cache/annotations'
+      - '%file_cache_dir%'
 
   annotations.filesystem_cache:
     class: Symfony\Component\Cache\DoctrineProvider
