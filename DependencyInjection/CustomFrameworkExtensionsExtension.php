@@ -236,7 +236,7 @@ class CustomFrameworkExtensionsExtension extends Extension
      */
     private function registerAnnotationsConfiguration(array $config, ContainerBuilder $container) : void
     {
-        if (!$this->annotationsConfigEnabled) {
+        if (!$config['enabled']) {
             return;
         }
 
@@ -256,8 +256,8 @@ class CustomFrameworkExtensionsExtension extends Extension
 
             $cacheService = $config['cache'];
 
-            $container->getParameterBag()->set('file_cache_dir', $config['file_cache_dir']);
-            $container->getParameterBag()->set('annotations_ttl_cache', $config['ttl_cache']);
+            $container->setParameter('file_cache_dir', $config['file_cache_dir']);
+            $container->setParameter('annotations_ttl_cache', $config['ttl_cache']);
 
             if ('php_array' === $config['cache']) {
                 $cacheService = 'annotations.cache';

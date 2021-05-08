@@ -110,7 +110,7 @@ final class Configuration implements ConfigurationInterface
             ->children()
             ->scalarNode('cache')->defaultValue(interface_exists(Cache::class) ? 'php_array' : 'none')->end()
             ->scalarNode('file_cache_dir')->defaultValue('%kernel.cache_dir%/annotations')->end()
-            ->scalarNode('annotations_ttl_cache')->defaultValue(3600)->end()
+            ->scalarNode('ttl_cache')->defaultValue(3600)->end()
             ->booleanNode('debug')->defaultValue('%kernel.debug%')->end()
             ->end()
             ->end()
