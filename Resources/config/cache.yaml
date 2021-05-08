@@ -42,6 +42,38 @@ services:
     tags:
       - { name: cache.pool, clearer: cache.app_clearer }
 
+  cache.annotations:
+    public: true
+    autowire: true
+    autoconfigure: false
+    parent: "cache.system"
+    tags:
+      - { name: cache.pool, clearer: cache.app_clearer }
+
+  cache.serializer:
+    public: true
+    autowire: true
+    autoconfigure: false
+    parent: "cache.system"
+    tags:
+      - { name: cache.pool, clearer: cache.app_clearer }
+
+  cache.property_info:
+    public: true
+    autowire: true
+    autoconfigure: false
+    parent: "cache.system"
+    tags:
+      - { name: cache.pool, clearer: cache.app_clearer }
+
+  cache.validator:
+    public: true
+    autowire: true
+    autoconfigure: false
+    parent: "cache.system"
+    tags:
+      - { name: cache.pool, clearer: cache.app_clearer }
+
   cache.app.taggable:
     class: Symfony\Component\Cache\Adapter\TagAwareAdapter
     arguments: ['@cache.app']

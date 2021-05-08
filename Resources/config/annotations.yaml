@@ -45,3 +45,15 @@ services:
       - '@annotations.reader'
       - '@annotations.filesystem_cache'
       - '%kernel.debug%'
+
+  annotations.php_array_adapter_factory:
+    class: Symfony\Component\Cache\Adapter\PhpArrayAdapter
+    factory: ['Symfony\Component\Cache\Adapter\PhpArrayAdapter', 'create']
+    arguments:
+      - '%kernel.cache_dir%/annotations.php'
+      - '@cache.annotations'
+
+  annotations.cache:
+    class: Symfony\Component\Cache\DoctrineProvider
+    arguments:
+      - '@annotations.php_array_adapter_factory'
