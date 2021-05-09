@@ -259,13 +259,11 @@ class CustomFrameworkExtensionsExtension extends Extension
 
             $cacheService = $config['cache'];
 
-            $container->setParameter('file_cache_dir', $config['file_cache_dir']);
-            $container->setParameter('annotations_ttl_cache', $config['ttl_cache']);
-
             if ('php_array' === $config['cache']) {
                 $cacheService = 'annotations.cache';
             } elseif ('file' === $config['cache']) {
                 $cacheDir = $container->getParameterBag()->resolveValue($config['file_cache_dir']);
+                $cacheTtl = $container->getParameterBag()->resolveValue($config['ttl_cache']);
 
                 if (!is_dir($cacheDir) && false === @mkdir($cacheDir, 0777, true) && !is_dir($cacheDir)) {
                     throw new RuntimeException(sprintf('Could not create cache directory "%s".', $cacheDir));
@@ -274,6 +272,11 @@ class CustomFrameworkExtensionsExtension extends Extension
                 $container
                     ->getDefinition('annotations.filesystem_cache_adapter')
                     ->replaceArgument(2, $cacheDir)
+                ;
+
+                $container
+                    ->getDefinition('annotations.filesystem_cache_adapter')
+                    ->replaceArgument(1, $cacheTtl)
                 ;
 
                 $cacheService = 'annotations.filesystem_cache';

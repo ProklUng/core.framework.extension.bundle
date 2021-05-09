@@ -27,8 +27,8 @@ services:
     class: Symfony\Component\Cache\Adapter\FilesystemAdapter
     arguments:
       - 'annotations'
-      - '%annotations_ttl_cache%'
-      - '%file_cache_dir%'
+      - 0
+      - ''
 
   annotations.filesystem_cache:
     class: Symfony\Component\Cache\DoctrineProvider
