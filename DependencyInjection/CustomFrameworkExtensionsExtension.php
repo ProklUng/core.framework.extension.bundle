@@ -136,12 +136,13 @@ class CustomFrameworkExtensionsExtension extends Extension
             }
         }
 
-        $container->setParameter('enable_annotations', $this->annotationsConfigEnabled);
         if (!empty($config['annotations']) && $config['annotations']['enabled'] === true) {
             $container->setParameter('enable_annotations', true);
             $loader->load('annotations.yaml');
             $this->registerAnnotationsConfiguration($config['annotations'], $container);
         }
+
+        $container->setParameter('enable_annotations', $this->annotationsConfigEnabled);
 
         if (!empty($config['csrf_protection']) && $config['csrf_protection']['enabled'] === true) {
             $loader->load('csrf.yaml');
@@ -239,6 +240,8 @@ class CustomFrameworkExtensionsExtension extends Extension
         if (!$config['enabled']) {
             return;
         }
+
+        $this->annotationsConfigEnabled = true;
 
         if (!class_exists(\Doctrine\Common\Annotations\Annotation::class)) {
             throw new LogicException('Annotations cannot be enabled as the Doctrine Annotation library is not installed.');
