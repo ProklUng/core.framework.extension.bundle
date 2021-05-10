@@ -38,6 +38,7 @@ final class Configuration implements ConfigurationInterface
         $this->addCsrfSection($rootNode);
         $this->addPropertyAccessSection($rootNode);
         $this->addPropertyInfoSection($rootNode);
+        $this->addTwigSection($rootNode);
 
         $dbalConfig = new DbalConfiguration();
         $dbalConfig->addDbalSection($rootNode);
@@ -302,9 +303,34 @@ final class Configuration implements ConfigurationInterface
             ->arrayNode('secrets')
             ->canBeDisabled()
             ->children()
-            ->scalarNode('vault_directory')->defaultValue('%kernel.project_dir%/config/secrets/%kernel.environment%')->cannotBeEmpty()->end()
-            ->scalarNode('local_dotenv_file')->defaultValue('%kernel.project_dir%/.env.%kernel.environment%.local')->end()
-            ->scalarNode('decryption_env_var')->defaultValue('base64:default::SYMFONY_DECRYPTION_SECRET')->end()
+                ->scalarNode('vault_directory')->defaultValue('%kernel.project_dir%/config/secrets/%kernel.environment%')->cannotBeEmpty()->end()
+                ->scalarNode('local_dotenv_file')->defaultValue('%kernel.project_dir%/.env.%kernel.environment%.local')->end()
+                ->scalarNode('decryption_env_var')->defaultValue('base64:default::SYMFONY_DECRYPTION_SECRET')->end()
+            ->end()
+            ->end()
+            ->end()
+        ;
+    }
+
+    /**
+     * Annotations.
+     *
+     * @param ArrayNodeDefinition $rootNode Node.
+     *
+     * @return void
+     */
+    private function addTwigSection(ArrayNodeDefinition $rootNode) : void
+    {
+        $rootNode
+            ->children()
+            ->arrayNode('twig')
+            ->info('Twig configuration')
+            ->children()
+                ->arrayNode('paths')
+                    ->scalarPrototype()->end()
+                ->end()
+                ->booleanNode('cache')->defaultValue(false)->end()
+                ->scalarNode('cache_dir')->defaultValue('')->end()
             ->end()
             ->end()
             ->end()

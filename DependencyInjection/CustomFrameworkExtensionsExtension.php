@@ -79,6 +79,10 @@ class CustomFrameworkExtensionsExtension extends Extension
         $loader->load('stuff.yaml');
         $loader->load('filesystem.yaml');
 
+        if (!empty($config['twig'])) {
+            $container->setParameter('twig', $config['twig']);
+        }
+
         if (!empty($config['cache']) && $config['cache']['enabled'] === true) {
             $loader->load('cache.yaml');
             $cacheConfig = new CacheConfiguration();

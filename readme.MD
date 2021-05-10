@@ -43,11 +43,18 @@ framework:
     directory: '%kernel.project_dir%/bitrix/cache/symfony'
     default_memcached_provider: 'memcached://localhost'
 
-    pools:
-      my_cache_pool:
-        public: true
-        provider: cache.adapter.filesystem
-        default_lifetime: 600
+  pools:
+    my_cache_pool:
+      public: true
+      provider: cache.adapter.filesystem
+      default_lifetime: 600
+  twig:
+    # Пути к шаблонам
+    paths:
+      - '/local/twig/'
+
+    cache: false
+    cache_dir: '/bitrix/cache/twig'
 
   dbal:
     enabled: true
