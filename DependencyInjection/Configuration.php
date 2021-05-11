@@ -331,6 +331,7 @@ final class Configuration implements ConfigurationInterface
                 ->end()
                 ->booleanNode('cache')->defaultValue(false)->end()
                 ->scalarNode('cache_dir')->defaultValue('')->end()
+                ->scalarNode('default_path option')->defaultValue('')->end()
             ->end()
             ->end()
             ->end()

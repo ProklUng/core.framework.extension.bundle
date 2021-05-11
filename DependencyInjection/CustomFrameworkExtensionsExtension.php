@@ -81,6 +81,9 @@ class CustomFrameworkExtensionsExtension extends Extension
 
         if (!empty($config['twig'])) {
             $container->setParameter('twig_config', $config['twig']);
+            $container->setParameter('twig_paths', (array)$config['twig']['paths']);
+            $container->setParameter('twig_cache_dir', (string)$config['twig']['cache_dir']);
+            $container->setParameter('twig_default_path', (string)$config['twig']['default_path option']);
         }
 
         if (!empty($config['cache']) && $config['cache']['enabled'] === true) {
