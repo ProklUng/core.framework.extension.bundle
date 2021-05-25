@@ -193,7 +193,7 @@ class CustomFrameworkExtensionsExtension extends Extension
     private function registerSessionConfiguration(array $config, ContainerBuilder $container) : void
     {
         // session storage
-        $container->setAlias('session.storage', $config['storage_id'])->setPrivate(true);
+        $container->setAlias('session.storage', $config['storage_id'])->setPublic(false);
         $options = ['cache_limiter' => '0'];
         foreach (['name', 'cookie_lifetime', 'cookie_path', 'cookie_domain', 'cookie_secure', 'cookie_httponly', 'cookie_samesite', 'use_cookies', 'gc_maxlifetime', 'gc_probability', 'gc_divisor', 'sid_length', 'sid_bits_per_character'] as $key) {
             if (isset($config[$key])) {
@@ -216,7 +216,7 @@ class CustomFrameworkExtensionsExtension extends Extension
             // Set the handler class to be null
             $container->getDefinition('session.storage.native')->replaceArgument(1, null);
             $container->getDefinition('session.storage.php_bridge')->replaceArgument(0, null);
-            $container->setAlias('session.handler', 'session.handler.native_file')->setPrivate(true);
+            $container->setAlias('session.handler', 'session.handler.native_file')->setPublic(false);
         } else {
             $container->resolveEnvPlaceholders($config['handler_id'], null, $usedEnvs);
 
@@ -226,9 +226,9 @@ class CustomFrameworkExtensionsExtension extends Extension
                 $container->getDefinition('session.abstract_handler')
                     ->replaceArgument(0, $container->hasDefinition($id) ? new Reference($id) : $config['handler_id']);
 
-                $container->setAlias('session.handler', 'session.abstract_handler')->setPrivate(true);
+                $container->setAlias('session.handler', 'session.abstract_handler')->setPublic(false);
             } else {
-                $container->setAlias('session.handler', $config['handler_id'])->setPrivate(true);
+                $container->setAlias('session.handler', $config['handler_id'])->setPublic(false);
             }
         }
 
@@ -297,7 +297,7 @@ class CustomFrameworkExtensionsExtension extends Extension
                 ->addTag('annotations.cached_reader')
             ;
 
-            $container->setAlias('annotation_reader', 'annotations.cached_reader')->setPrivate(true);
+            $container->setAlias('annotation_reader', 'annotations.cached_reader')->setPublic(false);
             $container->setAlias(Reader::class, new Alias('annotations.cached_reader', false));
         } else {
             $container->removeDefinition('annotations.cached_reader');
