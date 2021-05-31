@@ -21,7 +21,9 @@ use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
+use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
+use Symfony\Component\PropertyInfo\PropertyReadInfoExtractorInterface;
 use Symfony\Component\Validator\Validation;
 
 /**
@@ -368,11 +370,29 @@ class CustomFrameworkExtensionsExtension extends Extension
             return;
         }
 
-        $container
-            ->getDefinition('property_accessor')
-            ->replaceArgument(0, $config['magic_call'])
-            ->replaceArgument(1, $config['throw_exception_on_invalid_index'])
-            ->replaceArgument(3, $config['throw_exception_on_invalid_property_path'])
-        ;
+        if (version_compare(Kernel::VERSION,'5.3.0', '<')) {
+            $container
+                ->getDefinition('property_accessor')
+                ->replaceArgument(0, $config['magic_call'])
+                ->replaceArgument(1, $config['throw_exception_on_invalid_index'])
+                ->replaceArgument(3, $config['throw_exception_on_invalid_property_path'])
+            ;
+        } else {
+            $magicMethods = PropertyAccessor::DISALLOW_MAGIC_METHODS;
+            $magicMethods |= $config['magic_call'] ? PropertyAccessor::MAGIC_CALL : 0;
+            $magicMethods |= $config['magic_get'] ? PropertyAccessor::MAGIC_GET : 0;
+            $magicMethods |= $config['magic_set'] ? PropertyAccessor::MAGIC_SET : 0;
+
+            $throw = PropertyAccessor::DO_NOT_THROW;
+            $throw |= $config['throw_exception_on_invalid_index'] ? PropertyAccessor::THROW_ON_INVALID_INDEX : 0;
+            $throw |= $config['throw_exception_on_invalid_property_path'] ? PropertyAccessor::THROW_ON_INVALID_PROPERTY_PATH : 0;
+
+            $container
+                ->getDefinition('property_accessor')
+                ->replaceArgument(0, $magicMethods)
+                ->replaceArgument(1, $throw)
+                ->replaceArgument(3, new Reference(PropertyReadInfoExtractorInterface::class, ContainerInterface::NULL_ON_INVALID_REFERENCE))
+            ;
+        }
     }
 }
