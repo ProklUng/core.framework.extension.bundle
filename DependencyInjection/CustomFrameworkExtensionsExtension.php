@@ -370,7 +370,7 @@ class CustomFrameworkExtensionsExtension extends Extension
             return;
         }
 
-        if (version_compare(Kernel::VERSION,'5.3.0', '<')) {
+        if (version_compare(Kernel::VERSION,'5.2.0', '<')) {
             $container
                 ->getDefinition('property_accessor')
                 ->replaceArgument(0, $config['magic_call'])
