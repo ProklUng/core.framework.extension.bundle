@@ -11,6 +11,7 @@ use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\Secr
 use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\SerializerConfigurator;
 use Prokl\CustomFrameworkExtensionsBundle\Extra\DoctrineDbalExtension;
 use RuntimeException;
+use Spiral\Attributes\ReaderInterface;
 use Symfony\Bridge\Twig\Extension\CsrfExtension;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Alias;
@@ -80,6 +81,7 @@ class CustomFrameworkExtensionsExtension extends Extension
         $loader->load('property_info.yaml');
         $loader->load('stuff.yaml');
         $loader->load('filesystem.yaml');
+        $loader->load('attributes.yaml');
 
         if (!empty($config['twig'])) {
             $container->setParameter('twig_config', $config['twig']);
@@ -301,8 +303,11 @@ class CustomFrameworkExtensionsExtension extends Extension
 
             $container->setAlias('annotation_reader', 'annotations.cached_reader')->setPublic(false);
             $container->setAlias(Reader::class, new Alias('annotations.cached_reader', false));
+            $container->setAlias(ReaderInterface::class, new Alias('spiral.psr6_selective_reader', false));
         } else {
             $container->removeDefinition('annotations.cached_reader');
+            $container->removeDefinition('spiral.psr6_selective_reader');
+            $container->setAlias(ReaderInterface::class, new Alias('spiral.annotations_selective_reader', false));
         }
     }
 

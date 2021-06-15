@@ -1,0 +1,31 @@
+#######################
+# Аннотации и атрибуты
+#######################
+
+services:
+  # конфигурация по умолчанию в *этом* файле
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  # Читатель аннотаций
+  spiral.annotation_reader:
+    class: Spiral\Attributes\AnnotationReader
+
+  # Читатель атрибутов PHP 8
+  spiral.attribute_reader:
+    class: Spiral\Attributes\AttributeReader
+
+  # Совмещенный читатель аннотаций Доктрины и аттрибутов PHP 8
+  spiral.annotations_selective_reader:
+    class: Spiral\Attributes\Composite\SelectiveReader
+    arguments:
+      - ['@spiral.annotation_reader', '@spiral.attribute_reader' ]
+
+  # Кэшированный вариант совмещенного читателя
+  spiral.psr6_selective_reader:
+    class: Spiral\Attributes\Psr6CachedReader
+    arguments:
+      - '@spiral.annotations_selective_reader'
+      - '@annotations.filesystem_cache_adapter'
