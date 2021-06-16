@@ -13,9 +13,23 @@ services:
   spiral.annotation_reader:
     class: Spiral\Attributes\AnnotationReader
 
+  # Кэшированный вариант читателя аннотаций
+  spiral.annotation_cached_reader:
+    class: Spiral\Attributes\Psr6CachedReader
+    arguments:
+      - '@spiral.annotation_reader'
+      - '@annotations.filesystem_cache_adapter'
+
   # Читатель атрибутов PHP 8
   spiral.attribute_reader:
     class: Spiral\Attributes\AttributeReader
+
+  # Кэшированный вариант читателя атрибутов
+  spiral.attribute_cached_reader:
+    class: Spiral\Attributes\Psr6CachedReader
+    arguments:
+      - '@spiral.attribute_reader'
+      - '@annotations.filesystem_cache_adapter'
 
   # Совмещенный читатель аннотаций Доктрины и аттрибутов PHP 8
   spiral.annotations_selective_reader:

@@ -307,6 +307,9 @@ class CustomFrameworkExtensionsExtension extends Extension
         } else {
             $container->removeDefinition('annotations.cached_reader');
             $container->removeDefinition('spiral.psr6_selective_reader');
+            $container->removeDefinition('spiral.attribute_cached_reader');
+            $container->removeDefinition('spiral.annotation_cached_reader');
+
             $container->setAlias(ReaderInterface::class, new Alias('spiral.annotations_selective_reader', false));
         }
     }

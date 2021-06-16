@@ -126,3 +126,20 @@ framework:
 ### Serializer
 
 ### Secrets
+
+### Чтение PHP 8 атрибутов на PHP >=7.2
+
+С использованием [компонента Spiral Framework](https://spiral.dev/docs/component-attributes).
+
+Сервисы:
+
+- `spiral.annotations_selective_reader` - совмещенный читатель аннотаций Doctrine и PHP 8 атрибутов.
+- `spiral.psr6_selective_reader` - PSR-6 совместимый кэшированный вариант совмещенного читателя.
+- `spiral.attribute_reader` - отдельный читатель PHP 8 атрибутов.
+- `spiral.attribute_cached_reader` - кэшированный вариант сервиса `spiral.attribute_reader`.
+- `spiral.annotation_reader` - читатель аннотаций Doctrine из Spiral Framework.
+- `spiral.annotation_cached_reader` - кэшированный вариант сервиса `spiral.annotation_reader`.
+
+Если в свойствах фрэймворка (`framework.yaml`) параметр `cache` не равен `file`, то все кэшированные варианты сервисов удаляются из контейнера.
+
+Параметры кэширования - `file_cache_dir` и `ttl_cache` - берутся из конфигурации `framework.yaml`.
