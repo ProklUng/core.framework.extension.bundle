@@ -115,6 +115,18 @@ class ConsoleCommandConfigurator
     }
 
     /**
+     * Опция авто выхода из команды.
+     *
+     * @param boolean $autoexit
+     *
+     * @return void
+     */
+    public function setAutoExit(bool $autoexit) : void
+    {
+        $this->application->setAutoExit($autoexit);
+    }
+
+    /**
      * Регистрация команд.
      *
      * @return void
