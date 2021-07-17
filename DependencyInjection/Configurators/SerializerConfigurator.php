@@ -2,11 +2,13 @@
 
 namespace Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators;
 
+use Symfony\Component\Config\Resource\DirectoryResource;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\Serializer\Normalizer\UnwrappingDenormalizer;
 use Symfony\Component\Yaml\Yaml;
@@ -35,6 +37,7 @@ class SerializerConfigurator
             return;
         }
 
+        $container->setParameter('serializer.mapping.cache.file', '%kernel.cache_dir%/serialization.php');
         $chainLoader = $container->getDefinition('serializer.mapping.chain_loader');
 
         if (!class_exists(PropertyAccessor::class)) {
@@ -62,6 +65,41 @@ class SerializerConfigurator
 
             $serializerLoaders[] = $annotationLoader;
         }
+
+        $fileRecorder = function ($extension, $path) use (&$serializerLoaders) {
+            $definition = new Definition(\in_array($extension, ['yaml', 'yml']) ? 'Symfony\Component\Serializer\Mapping\Loader\YamlFileLoader' : 'Symfony\Component\Serializer\Mapping\Loader\XmlFileLoader', [$path]);
+            $definition->setPublic(false);
+            $serializerLoaders[] = $definition;
+        };
+
+        foreach ($container->getParameter('kernel.bundles_metadata') as $bundle) {
+            $configDir = is_dir($bundle['path'].'/Resources/config') ? $bundle['path'].'/Resources/config' : $bundle['path'].'/config';
+
+            if ($container->fileExists($file = $configDir.'/serialization.xml', false)) {
+                $fileRecorder('xml', $file);
+            }
+
+            if (
+                $container->fileExists($file = $configDir.'/serialization.yaml', false) ||
+                $container->fileExists($file = $configDir.'/serialization.yml', false)
+            ) {
+                $fileRecorder('yml', $file);
+            }
+
+            if ($container->fileExists($dir = $configDir.'/serialization', '/^$/')) {
+                $this->registerMappingFilesFromDir($dir, $fileRecorder);
+            }
+        }
+
+        $projectDir = $container->getParameter('kernel.project_dir');
+        if ($container->fileExists($dir = $projectDir.'/config/serializer', '/^$/')) {
+            $this->registerMappingFilesFromDir($dir, $fileRecorder);
+        }
+
+        $this->registerMappingFilesFromConfig($container, $config, $fileRecorder);
+
+        $chainLoader->replaceArgument(0, $serializerLoaders);
+        $container->getDefinition('serializer.mapping.cache_warmer')->replaceArgument(0, $serializerLoaders);
 
         $chainLoader->replaceArgument(0, $serializerLoaders);
         // @phpstan-ignore-next-line
@@ -99,5 +137,29 @@ class SerializerConfigurator
         }
 
         return (bool) $container->getParameterBag()->resolveValue($config['enabled']);
+    }
+
+    private function registerMappingFilesFromDir(string $dir, callable $fileRecorder)
+    {
+        foreach (Finder::create()->followLinks()->files()->in($dir)->name('/\.(xml|ya?ml)$/')->sortByName() as $file) {
+            $fileRecorder($file->getExtension(), $file->getRealPath());
+        }
+    }
+
+    private function registerMappingFilesFromConfig(ContainerBuilder $container, array $config, callable $fileRecorder)
+    {
+        foreach ($config['mapping']['paths'] as $path) {
+            if (is_dir($path)) {
+                $this->registerMappingFilesFromDir($path, $fileRecorder);
+                $container->addResource(new DirectoryResource($path, '/^$/'));
+            } elseif ($container->fileExists($path, false)) {
+                if (!preg_match('/\.(xml|ya?ml)$/', $path, $matches)) {
+                    throw new \RuntimeException(sprintf('Unsupported mapping type in "%s", supported types are XML & Yaml.', $path));
+                }
+                $fileRecorder($matches[1], $path);
+            } else {
+                throw new \RuntimeException(sprintf('Could not open file or directory "%s".', $path));
+            }
+        }
     }
 }

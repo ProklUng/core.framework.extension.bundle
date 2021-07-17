@@ -114,6 +114,14 @@ services:
     tags:
       - { name: serializer.normalizer", priority: 1000}
 
+  serializer.mapping.cache_warmer:
+    class: Symfony\Bundle\FrameworkBundle\CacheWarmer\SerializerCacheWarmer
+    arguments:
+      - []
+      - '%serializer.mapping.cache.file%'
+    tags:
+      - { name: 'kernel.cache_warmer' }
+
   # Сериализатор aliases.
   Symfony\Component\Serializer\Serializer: '@serializer'
   Symfony\Component\Serializer\SerializerInterface: '@serializer'
