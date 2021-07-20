@@ -26,6 +26,7 @@ use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\PropertyInfo\PropertyReadInfoExtractorInterface;
 use Symfony\Component\Validator\Validation;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Class CustomFrameworkExtensionsExtension
@@ -82,6 +83,8 @@ class CustomFrameworkExtensionsExtension extends Extension
         $loader->load('stuff.yaml');
         $loader->load('filesystem.yaml');
         $loader->load('attributes.yaml');
+
+        $this->stuffProcess($container);
 
         if (!empty($config['twig'])) {
             $container->setParameter('twig_config', $config['twig']);
@@ -401,6 +404,21 @@ class CustomFrameworkExtensionsExtension extends Extension
                 ->replaceArgument(1, $throw)
                 ->replaceArgument(3, new Reference(PropertyReadInfoExtractorInterface::class, ContainerInterface::NULL_ON_INVALID_REFERENCE))
             ;
+        }
+    }
+
+    /**
+     * Обработка всяческих дополнительных сервисов.
+     *
+     * @param ContainerBuilder $container
+     *
+     * @return void
+     * @since 20.07.2021
+     */
+    private function stuffProcess(ContainerBuilder $container) : void
+    {
+        if (!$container->hasDefinition('event_dispatcher')) {
+            $container->removeDefinition(EventDispatcherInterface::class);
         }
     }
 }

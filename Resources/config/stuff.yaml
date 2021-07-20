@@ -70,3 +70,5 @@ services:
 
   Symfony\Component\HttpKernel\Controller\ContainerControllerResolver:
     arguments: ['@service_container']
+
+  Symfony\Contracts\EventDispatcher\EventDispatcherInterface: '@event_dispatcher'
