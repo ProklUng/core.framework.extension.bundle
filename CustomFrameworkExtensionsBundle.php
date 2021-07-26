@@ -7,9 +7,11 @@ use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\CustomFrameworkExt
 use Symfony\Component\Cache\DependencyInjection\CachePoolClearerPass;
 use Symfony\Component\Cache\DependencyInjection\CachePoolPass;
 use Symfony\Component\Cache\DependencyInjection\CachePoolPrunerPass;
+use Symfony\Component\Config\Resource\ClassExistenceResource;
 use Symfony\Component\DependencyInjection\Compiler\PassConfig;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
+use Symfony\Component\Messenger\DependencyInjection\MessengerPass;
 
 /**
  * Class CustomFrameworkExtensionsBundle
@@ -43,5 +45,23 @@ class CustomFrameworkExtensionsBundle extends Bundle
         $container->addCompilerPass(new CachePoolPass(), PassConfig::TYPE_BEFORE_OPTIMIZATION, 32);
         $container->addCompilerPass(new CachePoolClearerPass(), PassConfig::TYPE_AFTER_REMOVING);
         $container->addCompilerPass(new CachePoolPrunerPass(), PassConfig::TYPE_AFTER_REMOVING);
+        $this->addCompilerPassIfExists($container, MessengerPass::class);
+    }
+
+    /**
+     * @param ContainerBuilder $container
+     * @param string           $class
+     * @param string           $type
+     * @param integer          $priority
+     *
+     * @return void
+     */
+    private function addCompilerPassIfExists(ContainerBuilder $container, string $class, string $type = PassConfig::TYPE_BEFORE_OPTIMIZATION, int $priority = 0)
+    {
+        $container->addResource(new ClassExistenceResource($class));
+
+        if (class_exists($class)) {
+            $container->addCompilerPass(new $class(), $type, $priority);
+        }
     }
 }

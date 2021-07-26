@@ -29,6 +29,7 @@ use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Mailer\Bridge\Google\Transport\GmailTransportFactory;
 use Symfony\Component\Mailer\Mailer;
+use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\PropertyInfo\PropertyReadInfoExtractorInterface;
 use Symfony\Component\Validator\Validation;
@@ -88,8 +89,14 @@ class CustomFrameworkExtensionsExtension extends Extension
             new FileLocator(__DIR__ . self::DIR_CONFIG)
         );
 
+        $loaderPhp = new PhpFileLoader(
+            $container,
+            new FileLocator(__DIR__ . self::DIR_CONFIG)
+        );
+
         $loader->load('services.yaml');
         $loader->load('commands.yaml');
+        $loaderPhp->load('console.php');
         $loader->load('property_extractor.yaml');
         $loader->load('property_info.yaml');
         $loader->load('stuff.yaml');
@@ -194,11 +201,6 @@ class CustomFrameworkExtensionsExtension extends Extension
         }
 
         if (!empty($config['messenger']) && $config['messenger']['enabled'] === true) {
-            $loaderPhp = new PhpFileLoader(
-                $container,
-                new FileLocator(__DIR__ . self::DIR_CONFIG)
-            );
-
             if (!interface_exists(MessageBusInterface::class)) {
                 throw new LogicException('Messenger support cannot be enabled as the Messenger component is not installed. Try running "composer require symfony/messenger".');
             }
@@ -247,6 +249,16 @@ class CustomFrameworkExtensionsExtension extends Extension
             // Added explicitly so that we don't rely on the class map being dumped to make it work
             'Symfony\\Bundle\\FrameworkBundle\\Controller\\AbstractController',
         ]);
+
+
+        $container->registerForAutoconfiguration(Command::class)
+            ->addTag('console.command');
+        $container->registerForAutoconfiguration(EnvVarLoaderInterface::class)
+            ->addTag('container.env_var_loader');
+        $container->registerForAutoconfiguration(EnvVarProcessorInterface::class)
+            ->addTag('container.env_var_processor');
+        $container->registerForAutoconfiguration(MessageHandlerInterface::class)
+            ->addTag('messenger.message_handler');
     }
 
     /**
