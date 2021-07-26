@@ -52,6 +52,7 @@ use Symfony\Component\Translation\Command\XliffLintCommand;
 use Symfony\Component\Validator\Command\DebugCommand as ValidatorDebugCommand;
 
 return static function (ContainerConfigurator $container) {
+
     $container->services()
         ->set('console.error_listener', ErrorListener::class)
         ->args([
@@ -70,24 +71,6 @@ return static function (ContainerConfigurator $container) {
         ->args([
             service('filesystem'),
             param('kernel.project_dir'),
-        ])
-        ->tag('console.command')
-
-        ->set('console.command.cache_pool_clear', CachePoolClearCommand::class)
-        ->args([
-            service('cache.global_clearer'),
-        ])
-        ->tag('console.command')
-
-        ->set('console.command.cache_pool_prune', CachePoolPruneCommand::class)
-        ->args([
-            [],
-        ])
-        ->tag('console.command')
-
-        ->set('console.command.cache_pool_delete', CachePoolDeleteCommand::class)
-        ->args([
-            service('cache.global_clearer'),
         ])
         ->tag('console.command')
 
