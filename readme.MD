@@ -99,6 +99,9 @@ framework:
 
   property_access:
     enabled: true
+
+  mailer:
+    enabled: true
 ```
 
 ## Консольные команды
