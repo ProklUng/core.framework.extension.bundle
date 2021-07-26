@@ -55,5 +55,8 @@
     "symfony/twig-bridge": "^4.0 || ^5.0",
     "symfony/expression-language": "^5.2",
     "spiral/attributes": "^2.8"
+  },
+  "require-dev": {
+    "proklung/phpunit-testing-tools": "^1.0"
   }
 }

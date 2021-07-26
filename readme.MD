@@ -164,6 +164,23 @@ framework:
 
 Письмо запишется в файл, находящийся по адресу, указанному параметром `dsn_file` в `framework.yaml`.
 
+#### Кастомный отправитель писем
+
+```php
+        $factoryMail = container()->get('mailer_bundle.send_email_via_factory');
+        $message = $factoryMail->createMessage(
+            'example@gmail.com',
+            'Testing',
+            'Testing body',
+            [
+                'Лог' => '/my_app-2021-26-07.log' // Файл приаттачится к письму.
+            ]
+        );
+
+        $sender = container()->get('custom_mail_sender');
+        $sender->sendImmediately($message);
+```
+
 ### Чтение PHP 8 атрибутов на PHP >=7.2
 
 С использованием [компонента Spiral Framework](https://spiral.dev/docs/component-attributes).

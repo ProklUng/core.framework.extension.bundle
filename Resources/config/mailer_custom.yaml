@@ -16,13 +16,13 @@ services:
       - '@logger'
 
   # Сервис-обертка отправки писем.
-  custom_mail_service:
+  custom_mail_sender:
     class: Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\EmailService
     arguments:
       - '@mailer'
       - '@Symfony\Bridge\Twig\Mime\BodyRenderer'
 
-  Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\EmailService: '@custom_mail_service'
+  Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\EmailService: '@custom_mail_sender'
 
   Symfony\Bridge\Twig\Mime\BodyRenderer:
     class: Symfony\Bridge\Twig\Mime\BodyRenderer
