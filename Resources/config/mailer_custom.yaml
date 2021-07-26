@@ -46,3 +46,13 @@ services:
         bcc: []
         replyTo: '%mailer_default_email_from%'
         headers: []
+
+
+  ################
+  # Listeners
+  ################
+
+  Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\Events\SetFromListener:
+    arguments: ['%mailer_default_email_from%', '%mailer_default_title%']
+    tags:
+      - { name: kernel.event_subscriber }

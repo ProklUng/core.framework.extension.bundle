@@ -146,6 +146,24 @@ framework:
     dsn_file: file:///upload/emails/{Y}/{m}/{d}/@hash.eml
 ```
 
+#### File mailer transport
+
+```php
+       use Symfony\Component\Mime\Email;
+       $email = (new Email())
+            ->from('from@mail.ru')
+            ->to('example@gmail.com')
+            ->subject('Time for Symfony Mailer!')
+            ->text('Sending emails is fun again!')
+            ->html('<p>See Twig integration for better HTML integration!</p>');
+
+        /** @var \Symfony\Component\Mailer\Transport\TransportInterface $factory */
+        $factory = container()->get('custom_mailer_transports.filesystem');
+        $factory->send($email);
+```
+
+Письмо запишется в файл, находящийся по адресу, указанному параметром `dsn_file` в `framework.yaml`.
+
 ### Чтение PHP 8 атрибутов на PHP >=7.2
 
 С использованием [компонента Spiral Framework](https://spiral.dev/docs/component-attributes).
