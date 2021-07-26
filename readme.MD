@@ -130,14 +130,20 @@ framework:
 ### Mailer
 
 `framework.yaml`:
+
+```yaml
   mailer:
     enabled: true
     dsn: gmail+smtp://robotivanov2020:xxjqfjyegwmznrtb@default
 
     envelope:
       recipients: ['example@mail.ru']
-```yaml
-
+  
+    # Кастомные параметры
+    default_email_from: 'email@gmail.com'
+    default_email_title: 'Super title'
+    # Шаблон - для strftime, где элемент паттерна обрамлен скобками.
+    dsn_file: file:///upload/emails/{Y}/{m}/{d}/@hash.eml
 ```
 
 ### Чтение PHP 8 атрибутов на PHP >=7.2

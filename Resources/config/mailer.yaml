@@ -22,12 +22,12 @@ services:
     class: Symfony\Component\Mailer\Transport\Transports
     factory: ['@mailer.transport_factory', 'fromStrings']
     arguments:
-      - [ '%dsn%' ]
+      - [ '%mailer_dsn%' ]
 
   mailer.default_transport:
     class: Symfony\Component\Mailer\Transport\TransportInterface
     factory: ['@mailer.transport_factory', 'fromString']
-    arguments: ['%dsn%']
+    arguments: ['%mailer_dsn%']
 
   Symfony\Component\Mailer\Transport\TransportInterface: '@mailer.default_transport'
 

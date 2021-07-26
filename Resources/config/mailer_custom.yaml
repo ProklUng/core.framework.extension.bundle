@@ -4,6 +4,17 @@ services:
     autoconfigure: true
     public: true
 
+  # Транспорт - запись писем в файл.
+  custom_mailer_transports.filesystem:
+    class: Symfony\Component\Mailer\Transport\TransportInterface
+    factory: '@Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\Factory\TransportFactory'
+    arguments:
+      - '%mailer_dsn_file%'
+      - '@mailer.filesystem'
+      - '@event_dispatcher'
+      - '@http_client'
+      - '@logger'
+
   # Сервис-обертка отправки писем.
   custom_mail_service:
     class: Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\EmailService
@@ -23,3 +34,15 @@ services:
   Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\Factory\TransportFactory:
     arguments:
       - '%kernel.project_dir%'
+
+  # Тестовый сервис отправки почты через MailerMessageFactory
+  mailer_bundle.send_email_via_factory:
+    class: Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\Factory\MailerMessageFactory
+    arguments:
+      $documentRoot: '%kernel.project_dir%'
+      $defaultSettings:
+        from: '%mailer_default_email_from%'
+        cc: []
+        bcc: []
+        replyTo: '%mailer_default_email_from%'
+        headers: []

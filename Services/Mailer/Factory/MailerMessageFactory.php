@@ -2,7 +2,7 @@
 
 namespace Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\Factory;
 
-use Local\Bundles\SymfonyMailerBundle\Services\Contracts\MailerMessageFactoryInterface;
+use Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\Contracts\MailerMessageFactoryInterface;
 use Symfony\Bridge\Twig\Mime\TemplatedEmail;
 use Symfony\Component\Mime\Email;
 

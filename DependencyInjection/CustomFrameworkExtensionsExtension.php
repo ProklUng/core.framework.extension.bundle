@@ -448,5 +448,10 @@ class CustomFrameworkExtensionsExtension extends Extension
         $envelopeListener = $container->getDefinition('mailer.envelope_listener');
         $envelopeListener->setArgument(0, $sender);
         $envelopeListener->setArgument(1, $recipients);
+
+        $container->setParameter('mailer_dsn_file', (string)$config['dsn_file']);
+        $container->setParameter('mailer_dsn', (string)$config['dsn']);
+        $container->setParameter('mailer_default_email_from', (string)$config['default_email_from']);
+        $container->setParameter('mailer_default_title', (string)$config['default_email_title']);
     }
 }
