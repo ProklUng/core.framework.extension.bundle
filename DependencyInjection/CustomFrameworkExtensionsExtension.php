@@ -40,6 +40,41 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Transport\AmqpExt\AmqpTransportFactory;
 use Symfony\Component\Messenger\Transport\RedisExt\RedisTransportFactory;
 use Symfony\Component\Messenger\Transport\TransportInterface;
+use Symfony\Component\Notifier\Bridge\AllMySms\AllMySmsTransportFactory;
+use Symfony\Component\Notifier\Bridge\Clickatell\ClickatellTransportFactory;
+use Symfony\Component\Notifier\Bridge\Discord\DiscordTransportFactory;
+use Symfony\Component\Notifier\Bridge\Esendex\EsendexTransportFactory;
+use Symfony\Component\Notifier\Bridge\FakeChat\FakeChatTransportFactory;
+use Symfony\Component\Notifier\Bridge\FakeSms\FakeSmsTransportFactory;
+use Symfony\Component\Notifier\Bridge\Firebase\FirebaseTransportFactory;
+use Symfony\Component\Notifier\Bridge\FreeMobile\FreeMobileTransportFactory;
+use Symfony\Component\Notifier\Bridge\GatewayApi\GatewayApiTransportFactory;
+use Symfony\Component\Notifier\Bridge\Gitter\GitterTransportFactory;
+use Symfony\Component\Notifier\Bridge\GoogleChat\GoogleChatTransportFactory;
+use Symfony\Component\Notifier\Bridge\Infobip\InfobipTransportFactory;
+use Symfony\Component\Notifier\Bridge\Iqsms\IqsmsTransportFactory;
+use Symfony\Component\Notifier\Bridge\LightSms\LightSmsTransportFactory;
+use Symfony\Component\Notifier\Bridge\LinkedIn\LinkedInTransportFactory;
+use Symfony\Component\Notifier\Bridge\Mattermost\MattermostTransportFactory;
+use Symfony\Component\Notifier\Bridge\Mercure\MercureTransportFactory;
+use Symfony\Component\Notifier\Bridge\MessageBird\MessageBirdTransport;
+use Symfony\Component\Notifier\Bridge\MicrosoftTeams\MicrosoftTeamsTransportFactory;
+use Symfony\Component\Notifier\Bridge\Mobyt\MobytTransportFactory;
+use Symfony\Component\Notifier\Bridge\Nexmo\NexmoTransportFactory;
+use Symfony\Component\Notifier\Bridge\Octopush\OctopushTransportFactory;
+use Symfony\Component\Notifier\Bridge\OvhCloud\OvhCloudTransportFactory;
+use Symfony\Component\Notifier\Bridge\RocketChat\RocketChatTransportFactory;
+use Symfony\Component\Notifier\Bridge\Sendinblue\SendinblueTransportFactory as SendinblueNotifierTransportFactory;
+use Symfony\Component\Notifier\Bridge\Sinch\SinchTransportFactory;
+use Symfony\Component\Notifier\Bridge\Slack\SlackTransportFactory;
+use Symfony\Component\Notifier\Bridge\Smsapi\SmsapiTransportFactory;
+use Symfony\Component\Notifier\Bridge\SmsBiuras\SmsBiurasTransportFactory;
+use Symfony\Component\Notifier\Bridge\SpotHit\SpotHitTransportFactory;
+use Symfony\Component\Notifier\Bridge\Telegram\TelegramTransportFactory;
+use Symfony\Component\Notifier\Bridge\Twilio\TwilioTransportFactory;
+use Symfony\Component\Notifier\Bridge\Zulip\ZulipTransportFactory;
+use Symfony\Component\Notifier\Notifier;
+use Symfony\Component\Notifier\Recipient\Recipient;
 
 /**
  * Class CustomFrameworkExtensionsExtension
@@ -65,6 +100,16 @@ class CustomFrameworkExtensionsExtension extends Extension
      * @var boolean $validatorConfigEnabled
      */
     private $validatorConfigEnabled = false;
+
+    /**
+     * @var boolean $mailerConfigEnabled
+     */
+    private $mailerConfigEnabled = false;
+
+    /**
+     * @var boolean $messengerConfigEnabled
+     */
+    private $messengerConfigEnabled = false;
 
     /**
      * @inheritDoc
@@ -237,6 +282,16 @@ class CustomFrameworkExtensionsExtension extends Extension
                     $container->removeDefinition('messenger.transport.redis.factory');
                 }
             }
+        }
+
+        if (!empty($config['notifier']) && $config['notifier']['enabled'] === true) {
+            if (!class_exists(Notifier::class)) {
+                throw new LogicException('Notifier support cannot be enabled as the component is not installed. Try running "composer require symfony/notifier".');
+            }
+
+            $loaderPhp->load('notifier.php');
+            $loaderPhp->load('notifier_transports.php');
+            $this->registerNotifierConfiguration($config['notifier'], $container);
         }
 
         $propertyInfo = new PropertyInfoConfigurator();
@@ -520,6 +575,8 @@ class CustomFrameworkExtensionsExtension extends Extension
         $container->setParameter('mailer_dsn', (string)$config['dsn']);
         $container->setParameter('mailer_default_email_from', (string)$config['default_email_from']);
         $container->setParameter('mailer_default_title', (string)$config['default_email_title']);
+
+        $this->mailerConfigEnabled = true;
     }
 
     private function registerMessengerConfiguration(array $config, ContainerBuilder $container, array $validationConfig)
@@ -527,38 +584,20 @@ class CustomFrameworkExtensionsExtension extends Extension
         // Проблема совместимости с новыми версиями Symfony DI. Т.к. базовая сборка
         // залочена на psr-container 1.0, то с версиями 5.3.x - облом.
         // Пусть пока будет так.
-        if (method_exists(ContainerBuilder::class, 'willBeAvailable')) {
-            if (ContainerBuilder::willBeAvailable('symfony/amqp-messenger', AmqpTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-                $container->getDefinition('messenger.transport.amqp.factory')->addTag('messenger.transport_factory');
-            }
+        if (static::willBeAvailable('symfony/amqp-messenger', AmqpTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+            $container->getDefinition('messenger.transport.amqp.factory')->addTag('messenger.transport_factory');
+        }
 
-            if (ContainerBuilder::willBeAvailable('symfony/redis-messenger', RedisTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-                $container->getDefinition('messenger.transport.redis.factory')->addTag('messenger.transport_factory');
-            }
+        if (static::willBeAvailable('symfony/redis-messenger', RedisTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+            $container->getDefinition('messenger.transport.redis.factory')->addTag('messenger.transport_factory');
+        }
 
-            if (ContainerBuilder::willBeAvailable('symfony/amazon-sqs-messenger', AmazonSqsTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-                $container->getDefinition('messenger.transport.sqs.factory')->addTag('messenger.transport_factory');
-            }
+        if (static::willBeAvailable('symfony/amazon-sqs-messenger', AmazonSqsTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+            $container->getDefinition('messenger.transport.sqs.factory')->addTag('messenger.transport_factory');
+        }
 
-            if (ContainerBuilder::willBeAvailable('symfony/beanstalkd-messenger', BeanstalkdTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-                $container->getDefinition('messenger.transport.beanstalkd.factory')->addTag('messenger.transport_factory');
-            }
-        } else {
-            if (static::willBeAvailable('symfony/amqp-messenger', AmqpTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-                $container->getDefinition('messenger.transport.amqp.factory')->addTag('messenger.transport_factory');
-            }
-
-            if (static::willBeAvailable('symfony/redis-messenger', RedisTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-                $container->getDefinition('messenger.transport.redis.factory')->addTag('messenger.transport_factory');
-            }
-
-            if (static::willBeAvailable('symfony/amazon-sqs-messenger', AmazonSqsTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-                $container->getDefinition('messenger.transport.sqs.factory')->addTag('messenger.transport_factory');
-            }
-
-            if (static::willBeAvailable('symfony/beanstalkd-messenger', BeanstalkdTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-                $container->getDefinition('messenger.transport.beanstalkd.factory')->addTag('messenger.transport_factory');
-            }
+        if (static::willBeAvailable('symfony/beanstalkd-messenger', BeanstalkdTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+            $container->getDefinition('messenger.transport.beanstalkd.factory')->addTag('messenger.transport_factory');
         }
 
         if (null === $config['default_bus'] && 1 === \count($config['buses'])) {
@@ -749,6 +788,129 @@ class CustomFrameworkExtensionsExtension extends Extension
             $container->removeDefinition('console.command.messenger_failed_messages_show');
             $container->removeDefinition('console.command.messenger_failed_messages_remove');
         }
+
+        $this->messengerConfigEnabled = true;
+    }
+
+    private function registerNotifierConfiguration(array $config, ContainerBuilder $container)
+    {
+        if ($config['chatter_transports']) {
+            $container->getDefinition('chatter.transports')->setArgument(0, $config['chatter_transports']);
+        } else {
+            $container->removeDefinition('chatter');
+        }
+        if ($config['texter_transports']) {
+            $container->getDefinition('texter.transports')->setArgument(0, $config['texter_transports']);
+        } else {
+            $container->removeDefinition('texter');
+        }
+
+        if ($this->mailerConfigEnabled) {
+            $sender = $container->getDefinition('mailer.envelope_listener')->getArgument(0);
+            $container->getDefinition('notifier.channel.email')->setArgument(2, $sender);
+        } else {
+            $container->removeDefinition('notifier.channel.email');
+        }
+
+        if ($this->messengerConfigEnabled) {
+            if ($config['notification_on_failed_messages']) {
+                $container->getDefinition('notifier.failed_message_listener')->addTag('kernel.event_subscriber');
+            }
+
+            // as we have a bus, the channels don't need the transports
+            $container->getDefinition('notifier.channel.chat')->setArgument(0, null);
+            if ($container->hasDefinition('notifier.channel.email')) {
+                $container->getDefinition('notifier.channel.email')->setArgument(0, null);
+            }
+            $container->getDefinition('notifier.channel.sms')->setArgument(0, null);
+        }
+
+        $container->getDefinition('notifier.channel_policy')->setArgument(0, $config['channel_policy']);
+
+        $classToServices = [
+            AllMySmsTransportFactory::class => 'notifier.transport_factory.allmysms',
+            ClickatellTransportFactory::class => 'notifier.transport_factory.clickatell',
+            DiscordTransportFactory::class => 'notifier.transport_factory.discord',
+            EsendexTransportFactory::class => 'notifier.transport_factory.esendex',
+            FakeChatTransportFactory::class => 'notifier.transport_factory.fakechat',
+            FakeSmsTransportFactory::class => 'notifier.transport_factory.fakesms',
+            FirebaseTransportFactory::class => 'notifier.transport_factory.firebase',
+            FreeMobileTransportFactory::class => 'notifier.transport_factory.freemobile',
+            GatewayApiTransportFactory::class => 'notifier.transport_factory.gatewayapi',
+            GitterTransportFactory::class => 'notifier.transport_factory.gitter',
+            GoogleChatTransportFactory::class => 'notifier.transport_factory.googlechat',
+            InfobipTransportFactory::class => 'notifier.transport_factory.infobip',
+            IqsmsTransportFactory::class => 'notifier.transport_factory.iqsms',
+            LightSmsTransportFactory::class => 'notifier.transport_factory.lightsms',
+            LinkedInTransportFactory::class => 'notifier.transport_factory.linkedin',
+            MattermostTransportFactory::class => 'notifier.transport_factory.mattermost',
+            MercureTransportFactory::class => 'notifier.transport_factory.mercure',
+            MessageBirdTransport::class => 'notifier.transport_factory.messagebird',
+            MicrosoftTeamsTransportFactory::class => 'notifier.transport_factory.microsoftteams',
+            MobytTransportFactory::class => 'notifier.transport_factory.mobyt',
+            NexmoTransportFactory::class => 'notifier.transport_factory.nexmo',
+            OctopushTransportFactory::class => 'notifier.transport_factory.octopush',
+            OvhCloudTransportFactory::class => 'notifier.transport_factory.ovhcloud',
+            RocketChatTransportFactory::class => 'notifier.transport_factory.rocketchat',
+            SendinblueNotifierTransportFactory::class => 'notifier.transport_factory.sendinblue',
+            SinchTransportFactory::class => 'notifier.transport_factory.sinch',
+            SlackTransportFactory::class => 'notifier.transport_factory.slack',
+            SmsapiTransportFactory::class => 'notifier.transport_factory.smsapi',
+            SmsBiurasTransportFactory::class => 'notifier.transport_factory.smsbiuras',
+            SpotHitTransportFactory::class => 'notifier.transport_factory.spothit',
+            TelegramTransportFactory::class => 'notifier.transport_factory.telegram',
+            TwilioTransportFactory::class => 'notifier.transport_factory.twilio',
+            ZulipTransportFactory::class => 'notifier.transport_factory.zulip',
+        ];
+
+        $parentPackages = ['symfony/framework-bundle', 'symfony/notifier'];
+
+        foreach ($classToServices as $class => $service) {
+            switch ($package = substr($service, \strlen('notifier.transport_factory.'))) {
+                case 'fakechat': $package = 'fake-chat'; break;
+                case 'fakesms': $package = 'fake-sms'; break;
+                case 'freemobile': $package = 'free-mobile'; break;
+                case 'googlechat': $package = 'google-chat'; break;
+                case 'lightsms': $package = 'light-sms'; break;
+                case 'linkedin': $package = 'linked-in'; break;
+                case 'messagebird': $package = 'message-bird'; break;
+                case 'microsoftteams': $package = 'microsoft-teams'; break;
+                case 'ovhcloud': $package = 'ovh-cloud'; break;
+                case 'rocketchat': $package = 'rocket-chat'; break;
+                case 'smsbiuras': $package = 'sms-biuras'; break;
+                case 'spothit': $package = 'spot-hit'; break;
+            }
+
+            if (!static::willBeAvailable(sprintf('symfony/%s-notifier', $package), $class, $parentPackages)) {
+                $container->removeDefinition($service);
+            }
+        }
+
+        if (static::willBeAvailable('symfony/mercure-notifier', MercureTransportFactory::class, $parentPackages) && ContainerBuilder::willBeAvailable('symfony/mercure-bundle', MercureBundle::class, $parentPackages)) {
+            $container->getDefinition($classToServices[MercureTransportFactory::class])
+                ->replaceArgument('$registry', new Reference(HubRegistry::class));
+        } elseif (static::willBeAvailable('symfony/mercure-notifier', MercureTransportFactory::class, $parentPackages)) {
+            $container->removeDefinition($classToServices[MercureTransportFactory::class]);
+        }
+
+        if (static::willBeAvailable('symfony/fake-chat-notifier', FakeChatTransportFactory::class, ['symfony/framework-bundle', 'symfony/notifier', 'symfony/mailer'])) {
+            $container->getDefinition($classToServices[FakeChatTransportFactory::class])
+                ->replaceArgument('$mailer', new Reference('mailer'));
+        }
+
+        if (static::willBeAvailable('symfony/fake-sms-notifier', FakeSmsTransportFactory::class, ['symfony/framework-bundle', 'symfony/notifier', 'symfony/mailer'])) {
+            $container->getDefinition($classToServices[FakeSmsTransportFactory::class])
+                ->replaceArgument('$mailer', new Reference('mailer'));
+        }
+
+        if (isset($config['admin_recipients'])) {
+            $notifier = $container->getDefinition('notifier');
+            foreach ($config['admin_recipients'] as $i => $recipient) {
+                $id = 'notifier.admin_recipient.'.$i;
+                $container->setDefinition($id, new Definition(Recipient::class, [$recipient['email'], $recipient['phone']]));
+                $notifier->addMethodCall('addAdminRecipient', [new Reference($id)]);
+            }
+        }
     }
 
     /**
@@ -759,6 +921,10 @@ class CustomFrameworkExtensionsExtension extends Extension
      */
     private static function willBeAvailable(string $package, string $class, array $parentPackages): bool
     {
+        if (method_exists(ContainerBuilder::class, 'willBeAvailable')) {
+            return ContainerBuilder::willBeAvailable($package, $class, $parentPackages);
+        }
+
         if (!class_exists($class) && !interface_exists($class, false) && !trait_exists($class, false)) {
             return false;
         }

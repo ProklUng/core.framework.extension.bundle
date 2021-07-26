@@ -2,6 +2,7 @@
 
 namespace Prokl\CustomFrameworkExtensionsBundle\DependencyInjection;
 
+use Composer\InstalledVersions;
 use Doctrine\Common\Annotations\Annotation;
 use Doctrine\Common\Cache\Cache;
 use Doctrine\DBAL\Connection;
@@ -30,6 +31,17 @@ final class Configuration implements ConfigurationInterface
         $treeBuilder = new TreeBuilder('framework');
         $rootNode    = $treeBuilder->getRootNode();
 
+        $willBeAvailable = static function (string $package, string $class, string $parentPackage = null) {
+            $parentPackages = (array) $parentPackage;
+            $parentPackages[] = 'symfony/framework-bundle';
+
+            return static::willBeAvailable($package, $class, $parentPackages);
+        };
+
+        $enableIfStandalone = static function (string $package, string $class) use ($willBeAvailable) {
+            return !class_exists(FullStack::class) && $willBeAvailable($package, $class) ? 'canBeDisabled' : 'canBeEnabled';
+        };
+
         // Валидатор.
         $this->addValidatorSection($rootNode);
         // Кэш.
@@ -44,6 +56,7 @@ final class Configuration implements ConfigurationInterface
         $this->addTwigSection($rootNode);
         $this->addMailerSection($rootNode);
         $this->addMessengerSection($rootNode);
+        $this->addNotifierSection($rootNode, $enableIfStandalone);
 
         $dbalConfig = new DbalConfiguration();
         $dbalConfig->addDbalSection($rootNode);
@@ -626,5 +639,87 @@ final class Configuration implements ConfigurationInterface
             ->end()
             ->end()
         ;
+    }
+
+    private function addNotifierSection(ArrayNodeDefinition $rootNode, callable $enableIfStandalone)
+    {
+        $rootNode
+            ->children()
+            ->arrayNode('notifier')
+            ->info('Notifier configuration')
+            ->{$enableIfStandalone('symfony/notifier', Notifier::class)}()
+            ->fixXmlConfig('chatter_transport')
+            ->children()
+            ->arrayNode('chatter_transports')
+            ->useAttributeAsKey('name')
+            ->prototype('scalar')->end()
+            ->end()
+            ->end()
+            ->fixXmlConfig('texter_transport')
+            ->children()
+            ->arrayNode('texter_transports')
+            ->useAttributeAsKey('name')
+            ->prototype('scalar')->end()
+            ->end()
+            ->end()
+            ->children()
+            ->booleanNode('notification_on_failed_messages')->defaultFalse()->end()
+            ->end()
+            ->children()
+            ->arrayNode('channel_policy')
+            ->useAttributeAsKey('name')
+            ->prototype('array')
+            ->beforeNormalization()->ifString()->then(function (string $v) { return [$v]; })->end()
+            ->prototype('scalar')->end()
+            ->end()
+            ->end()
+            ->end()
+            ->fixXmlConfig('admin_recipient')
+            ->children()
+            ->arrayNode('admin_recipients')
+            ->prototype('array')
+            ->children()
+            ->scalarNode('email')->cannotBeEmpty()->end()
+            ->scalarNode('phone')->defaultValue('')->end()
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+        ;
+    }
+
+    /**
+     * Checks whether a class is available and will remain available in the "no-dev" mode of Composer.
+     *
+     * When parent packages are provided and if any of them is in dev-only mode,
+     * the class will be considered available even if it is also in dev-only mode.
+     */
+    private static function willBeAvailable(string $package, string $class, array $parentPackages): bool
+    {
+        if (!class_exists($class) && !interface_exists($class, false) && !trait_exists($class, false)) {
+            return false;
+        }
+
+        if (!class_exists(InstalledVersions::class) || !InstalledVersions::isInstalled($package) || InstalledVersions::isInstalled($package, false)) {
+            return true;
+        }
+
+        // the package is installed but in dev-mode only, check if this applies to one of the parent packages too
+
+        $rootPackage = InstalledVersions::getRootPackage()['name'] ?? '';
+
+        if ('symfony/symfony' === $rootPackage) {
+            return true;
+        }
+
+        foreach ($parentPackages as $parentPackage) {
+            if ($rootPackage === $parentPackage || (InstalledVersions::isInstalled($parentPackage) && !InstalledVersions::isInstalled($parentPackage, false))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

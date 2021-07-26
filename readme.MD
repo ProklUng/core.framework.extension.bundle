@@ -105,6 +105,9 @@ framework:
 
   messenger:
     enabled: true
+
+  notifier:
+    enabled: true
 ```
 
 ## Консольные команды
@@ -132,6 +135,8 @@ framework:
 ### Serializer
 
 ### Secrets
+
+### Notifier
 
 ### Messenger
 
