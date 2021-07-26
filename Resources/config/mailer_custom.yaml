@@ -18,3 +18,8 @@ services:
     arguments: ['@twig.instance']
 
   Symfony\Component\Mime\BodyRendererInterface: '@Symfony\Bridge\Twig\Mime\BodyRenderer'
+
+  # Кастомная фабрика транспортов.
+  Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\Factory\TransportFactory:
+    arguments:
+      - '%kernel.project_dir%'

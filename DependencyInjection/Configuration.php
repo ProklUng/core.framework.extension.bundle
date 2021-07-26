@@ -10,6 +10,7 @@ use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\HttpFoundation\Cookie;
+use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\PropertyInfo\PropertyInfoExtractorInterface;
 use Symfony\Component\Serializer\Serializer;
 
@@ -39,6 +40,7 @@ final class Configuration implements ConfigurationInterface
         $this->addPropertyAccessSection($rootNode);
         $this->addPropertyInfoSection($rootNode);
         $this->addTwigSection($rootNode);
+        $this->addMailerSection($rootNode);
 
         $dbalConfig = new DbalConfiguration();
         $dbalConfig->addDbalSection($rootNode);
@@ -385,6 +387,46 @@ final class Configuration implements ConfigurationInterface
             ->integerNode('sid_bits_per_character')
             ->min(4)
             ->max(6)
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+        ;
+    }
+
+    private function addMailerSection(ArrayNodeDefinition $rootNode)
+    {
+        $rootNode
+            ->children()
+            ->arrayNode('mailer')
+            ->info('Mailer configuration')
+            ->{!class_exists(FullStack::class) && class_exists(Mailer::class) ? 'canBeDisabled' : 'canBeEnabled'}()
+            ->validate()
+            ->ifTrue(function ($v) { return isset($v['dsn']) && \count($v['transports']); })
+            ->thenInvalid('"dsn" and "transports" cannot be used together.')
+            ->end()
+            ->fixXmlConfig('transport')
+            ->children()
+            ->scalarNode('dsn')->defaultNull()->end()
+            ->arrayNode('transports')
+            ->useAttributeAsKey('name')
+            ->prototype('scalar')->end()
+            ->end()
+            ->arrayNode('envelope')
+            ->info('Mailer Envelope configuration')
+            ->children()
+            ->scalarNode('sender')->end()
+            ->arrayNode('recipients')
+            ->performNoDeepMerging()
+            ->beforeNormalization()
+            ->ifArray()
+            ->then(function ($v) {
+                return array_filter(array_values($v));
+            })
+            ->end()
+            ->prototype('scalar')->end()
+            ->end()
+            ->end()
             ->end()
             ->end()
             ->end()
