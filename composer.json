@@ -36,6 +36,8 @@
     "symfony/cache": "^4.0 || ^5.0",
     "symfony/yaml": "^4.0 || ^5.0",
     "symfony/messenger": "^4.0 || ^5.0",
+    "symfony/amqp-messenger": "^4.0 || ^5.0",
+    "symfony/redis-messenger": "^4.0 || ^5.0",
     "symfony/http-client": "^4.0 || ^5.0",
     "symfony/security-csrf": "^4.0 || ^5.0",
     "symfony/property-info": "^4.0 || ^5.0",
