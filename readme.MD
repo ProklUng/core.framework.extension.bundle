@@ -127,6 +127,19 @@ framework:
 
 ### Secrets
 
+### Mailer
+
+`framework.yaml`:
+  mailer:
+    enabled: true
+    dsn: gmail+smtp://robotivanov2020:xxjqfjyegwmznrtb@default
+
+    envelope:
+      recipients: ['example@mail.ru']
+```yaml
+
+```
+
 ### Чтение PHP 8 атрибутов на PHP >=7.2
 
 С использованием [компонента Spiral Framework](https://spiral.dev/docs/component-attributes).

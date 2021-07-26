@@ -23,10 +23,11 @@ use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\HttpKernel\Kernel;
+use Symfony\Component\Mailer\Bridge\Google\Transport\GmailTransportFactory;
+use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\PropertyInfo\PropertyReadInfoExtractorInterface;
 use Symfony\Component\Validator\Validation;
-use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Class CustomFrameworkExtensionsExtension
@@ -167,6 +168,18 @@ class CustomFrameworkExtensionsExtension extends Extension
                 $config['property_access'],
                 $container
             );
+        }
+
+        if (!empty($config['mailer']) && $config['mailer']['enabled'] === true) {
+            if (!class_exists(Mailer::class)) {
+                throw new LogicException('Mailer support cannot be enabled as the component is not installed. Try running "composer require symfony/mailer".');
+            }
+
+            $loader->load('mailer.yaml');
+            $loader->load('mailer_transports.yaml');
+            $loader->load('mailer_custom.yaml');
+
+            $this->registerMailerConfiguration($config['mailer'], $container);
         }
 
         $propertyInfo = new PropertyInfoConfigurator();
@@ -403,5 +416,37 @@ class CustomFrameworkExtensionsExtension extends Extension
                 ->replaceArgument(3, new Reference(PropertyReadInfoExtractorInterface::class, ContainerInterface::NULL_ON_INVALID_REFERENCE))
             ;
         }
+    }
+
+    private function registerMailerConfiguration(array $config, ContainerBuilder $container)
+    {
+        if (!\count($config['transports']) && null === $config['dsn']) {
+            $config['dsn'] = 'smtp://null';
+        }
+        $transports = $config['dsn'] ? ['main' => $config['dsn']] : $config['transports'];
+        $container->getDefinition('mailer.transports')->setArgument(0, $transports);
+        $container->getDefinition('mailer.default_transport')->setArgument(0, current($transports));
+
+        $classToServices = [
+            SesTransportFactory::class => 'mailer.transport_factory.amazon',
+            GmailTransportFactory::class => 'mailer.transport_factory.gmail',
+            MandrillTransportFactory::class => 'mailer.transport_factory.mailchimp',
+            MailgunTransportFactory::class => 'mailer.transport_factory.mailgun',
+            PostmarkTransportFactory::class => 'mailer.transport_factory.postmark',
+            SendgridTransportFactory::class => 'mailer.transport_factory.sendgrid',
+        ];
+
+        foreach ($classToServices as $class => $service) {
+            if (!class_exists($class)) {
+                $container->removeDefinition($service);
+            }
+        }
+
+        $recipients = $config['envelope']['recipients'] ?? null;
+        $sender = $config['envelope']['sender'] ?? null;
+
+        $envelopeListener = $container->getDefinition('mailer.envelope_listener');
+        $envelopeListener->setArgument(0, $sender);
+        $envelopeListener->setArgument(1, $recipients);
     }
 }

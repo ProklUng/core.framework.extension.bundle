@@ -19,5 +19,19 @@ class ConfigDependencyPass implements CompilerPassInterface
         if (!$container->hasDefinition('router')) {
             $container->removeDefinition('console.command.router_match');
         }
+
+        // Если нет Твига, то поудалять кастомные почтовые сервисы.
+        if (!$container->hasDefinition('twig.instance')) {
+            $services = [
+                'custom_mail_service',
+                'Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\EmailService',
+                'Symfony\Bridge\Twig\Mime\BodyRenderer',
+                'Symfony\Component\Mime\BodyRendererInterface'
+            ];
+
+            foreach ($services as $service) {
+                $container->removeDefinition($service);
+            }
+        }
     }
 }

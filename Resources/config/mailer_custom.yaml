@@ -1,0 +1,20 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: true
+
+  # Сервис-обертка отправки писем.
+  custom_mail_service:
+    class: Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\EmailService
+    arguments:
+      - '@mailer'
+      - '@Symfony\Bridge\Twig\Mime\BodyRenderer'
+
+  Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\EmailService: '@custom_mail_service'
+
+  Symfony\Bridge\Twig\Mime\BodyRenderer:
+    class: Symfony\Bridge\Twig\Mime\BodyRenderer
+    arguments: ['@twig.instance']
+
+  Symfony\Component\Mime\BodyRendererInterface: '@Symfony\Bridge\Twig\Mime\BodyRenderer'

@@ -38,6 +38,8 @@
     "symfony/http-client": "^4.0 || ^5.0",
     "symfony/security-csrf": "^4.0 || ^5.0",
     "symfony/property-info": "^4.0 || ^5.0",
+    "symfony/mailer": "^4.0 || ^5.0",
+    "symfony/google-mailer": "^4.0 || ^5.0",
     "symfony/mime": "^4.0 || ^5.0",
     "nyholm/psr7": "^1.4",
     "php-http/httplug": "^2.2",
