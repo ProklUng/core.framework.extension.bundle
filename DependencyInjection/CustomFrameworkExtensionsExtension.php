@@ -2,6 +2,7 @@
 
 namespace Prokl\CustomFrameworkExtensionsBundle\DependencyInjection;
 
+use Composer\InstalledVersions;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
 use Exception;
@@ -38,7 +39,6 @@ use Symfony\Component\Messenger\MessageBus;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Transport\AmqpExt\AmqpTransportFactory;
 use Symfony\Component\Messenger\Transport\RedisExt\RedisTransportFactory;
-use Symfony\Component\Messenger\Transport\TransportFactoryInterface;
 use Symfony\Component\Messenger\Transport\TransportInterface;
 
 /**
@@ -524,20 +524,41 @@ class CustomFrameworkExtensionsExtension extends Extension
 
     private function registerMessengerConfiguration(array $config, ContainerBuilder $container, array $validationConfig)
     {
-        if (ContainerBuilder::willBeAvailable('symfony/amqp-messenger', AmqpTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-            $container->getDefinition('messenger.transport.amqp.factory')->addTag('messenger.transport_factory');
-        }
+        // Проблема совместимости с новыми версиями Symfony DI. Т.к. базовая сборка
+        // залочена на psr-container 1.0, то с версиями 5.3.x - облом.
+        // Пусть пока будет так.
+        if (method_exists(ContainerBuilder::class, 'willBeAvailable')) {
+            if (ContainerBuilder::willBeAvailable('symfony/amqp-messenger', AmqpTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+                $container->getDefinition('messenger.transport.amqp.factory')->addTag('messenger.transport_factory');
+            }
 
-        if (ContainerBuilder::willBeAvailable('symfony/redis-messenger', RedisTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-            $container->getDefinition('messenger.transport.redis.factory')->addTag('messenger.transport_factory');
-        }
+            if (ContainerBuilder::willBeAvailable('symfony/redis-messenger', RedisTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+                $container->getDefinition('messenger.transport.redis.factory')->addTag('messenger.transport_factory');
+            }
 
-        if (ContainerBuilder::willBeAvailable('symfony/amazon-sqs-messenger', AmazonSqsTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-            $container->getDefinition('messenger.transport.sqs.factory')->addTag('messenger.transport_factory');
-        }
+            if (ContainerBuilder::willBeAvailable('symfony/amazon-sqs-messenger', AmazonSqsTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+                $container->getDefinition('messenger.transport.sqs.factory')->addTag('messenger.transport_factory');
+            }
 
-        if (ContainerBuilder::willBeAvailable('symfony/beanstalkd-messenger', BeanstalkdTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
-            $container->getDefinition('messenger.transport.beanstalkd.factory')->addTag('messenger.transport_factory');
+            if (ContainerBuilder::willBeAvailable('symfony/beanstalkd-messenger', BeanstalkdTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+                $container->getDefinition('messenger.transport.beanstalkd.factory')->addTag('messenger.transport_factory');
+            }
+        } else {
+            if (static::willBeAvailable('symfony/amqp-messenger', AmqpTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+                $container->getDefinition('messenger.transport.amqp.factory')->addTag('messenger.transport_factory');
+            }
+
+            if (static::willBeAvailable('symfony/redis-messenger', RedisTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+                $container->getDefinition('messenger.transport.redis.factory')->addTag('messenger.transport_factory');
+            }
+
+            if (static::willBeAvailable('symfony/amazon-sqs-messenger', AmazonSqsTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+                $container->getDefinition('messenger.transport.sqs.factory')->addTag('messenger.transport_factory');
+            }
+
+            if (static::willBeAvailable('symfony/beanstalkd-messenger', BeanstalkdTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+                $container->getDefinition('messenger.transport.beanstalkd.factory')->addTag('messenger.transport_factory');
+            }
         }
 
         if (null === $config['default_bus'] && 1 === \count($config['buses'])) {
@@ -728,5 +749,38 @@ class CustomFrameworkExtensionsExtension extends Extension
             $container->removeDefinition('console.command.messenger_failed_messages_show');
             $container->removeDefinition('console.command.messenger_failed_messages_remove');
         }
+    }
+
+    /**
+     * Checks whether a class is available and will remain available in the "no-dev" mode of Composer.
+     *
+     * When parent packages are provided and if any of them is in dev-only mode,
+     * the class will be considered available even if it is also in dev-only mode.
+     */
+    private static function willBeAvailable(string $package, string $class, array $parentPackages): bool
+    {
+        if (!class_exists($class) && !interface_exists($class, false) && !trait_exists($class, false)) {
+            return false;
+        }
+
+        if (!class_exists(InstalledVersions::class) || !InstalledVersions::isInstalled($package) || InstalledVersions::isInstalled($package, false)) {
+            return true;
+        }
+
+        // the package is installed but in dev-mode only, check if this applies to one of the parent packages too
+
+        $rootPackage = InstalledVersions::getRootPackage()['name'] ?? '';
+
+        if ('symfony/symfony' === $rootPackage) {
+            return true;
+        }
+
+        foreach ($parentPackages as $parentPackage) {
+            if ($rootPackage === $parentPackage || (InstalledVersions::isInstalled($parentPackage) && !InstalledVersions::isInstalled($parentPackage, false))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

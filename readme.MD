@@ -135,6 +135,13 @@ framework:
 
 ### Messenger
 
+Всё согласно [документации](https://symfony.com/doc/current/messenger.html#installation)
+
+Из нюансов: 
+
+- Auto-wiring `MessageHandlerInterface` не срабатывает. Нужно прописывать сервисы саморучно.
+- Чтобы заработала конструкция с `RabbitMQ` на сервере должно быть установлено `php_amqp` расширение для PHP.
+
 ### Mailer
 
 `framework.yaml`:
