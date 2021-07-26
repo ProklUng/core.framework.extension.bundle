@@ -35,7 +35,7 @@ return static function (ContainerConfigurator $container) {
     $container->services()
         ->set('notifier', Notifier::class)
             ->args([tagged_locator('notifier.channel', 'channel'), service('notifier.channel_policy')->ignoreOnInvalid()])
-
+        ->public()
         ->alias(NotifierInterface::class, 'notifier')
 
         ->set('notifier.channel_policy', ChannelPolicy::class)
