@@ -20,6 +20,14 @@ services:
       - { name: cache.pool, clearer: cache.app_clearer }
       - { name: monolog.logger, channel: cache }
 
+  cache.messenger.restart_workers_signal:
+    public: true
+    autowire: true
+    autoconfigure: false
+    parent: "cache.app"
+    tags:
+      - { name: cache.pool }
+
   cache.adapter.memcached:
     class: Symfony\Component\Cache\Adapter\MemcachedAdapter
     arguments: [~, ~,0, '@cache.default_marshaller']

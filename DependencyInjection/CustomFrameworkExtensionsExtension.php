@@ -16,9 +16,13 @@ use Symfony\Bridge\Twig\Extension\CsrfExtension;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
+use Symfony\Component\DependencyInjection\ChildDefinition;
+use Symfony\Component\DependencyInjection\Compiler\ServiceLocatorTagPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Exception\LogicException;
+use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
@@ -28,6 +32,13 @@ use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 use Symfony\Component\PropertyInfo\PropertyReadInfoExtractorInterface;
 use Symfony\Component\Validator\Validation;
+use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
+use Symfony\Component\Messenger\MessageBus;
+use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Messenger\Transport\AmqpExt\AmqpTransportFactory;
+use Symfony\Component\Messenger\Transport\RedisExt\RedisTransportFactory;
+use Symfony\Component\Messenger\Transport\TransportFactoryInterface;
+use Symfony\Component\Messenger\Transport\TransportInterface;
 
 /**
  * Class CustomFrameworkExtensionsExtension
@@ -180,6 +191,50 @@ class CustomFrameworkExtensionsExtension extends Extension
             $loader->load('mailer_custom.yaml');
 
             $this->registerMailerConfiguration($config['mailer'], $container);
+        }
+
+        if (!empty($config['messenger']) && $config['messenger']['enabled'] === true) {
+            $loaderPhp = new PhpFileLoader(
+                $container,
+                new FileLocator(__DIR__ . self::DIR_CONFIG)
+            );
+
+            if (!interface_exists(MessageBusInterface::class)) {
+                throw new LogicException('Messenger support cannot be enabled as the Messenger component is not installed. Try running "composer require symfony/messenger".');
+            }
+
+            $loaderPhp->load('messenger.php');
+
+            $this->registerMessengerConfiguration($config['messenger'], $container, (array)$config['validation']);
+        } else {
+            $container->removeDefinition('console.command.messenger_consume_messages');
+            $container->removeDefinition('console.command.messenger_debug');
+            $container->removeDefinition('console.command.messenger_stop_workers');
+            $container->removeDefinition('console.command.messenger_setup_transports');
+            $container->removeDefinition('console.command.messenger_failed_messages_retry');
+            $container->removeDefinition('console.command.messenger_failed_messages_show');
+            $container->removeDefinition('console.command.messenger_failed_messages_remove');
+            $container->removeDefinition('cache.messenger.restart_workers_signal');
+
+            if ($container->hasDefinition('messenger.transport.amqp.factory') && !class_exists(AmqpTransportFactory::class)) {
+                if (class_exists(\Symfony\Component\Messenger\Transport\AmqpExt\AmqpTransportFactory::class)) {
+                    $container->getDefinition('messenger.transport.amqp.factory')
+                        ->setClass(\Symfony\Component\Messenger\Transport\AmqpExt\AmqpTransportFactory::class)
+                        ->addTag('messenger.transport_factory');
+                } else {
+                    $container->removeDefinition('messenger.transport.amqp.factory');
+                }
+            }
+
+            if ($container->hasDefinition('messenger.transport.redis.factory') && !class_exists(RedisTransportFactory::class)) {
+                if (class_exists(\Symfony\Component\Messenger\Transport\RedisExt\RedisTransportFactory::class)) {
+                    $container->getDefinition('messenger.transport.redis.factory')
+                        ->setClass(\Symfony\Component\Messenger\Transport\RedisExt\RedisTransportFactory::class)
+                        ->addTag('messenger.transport_factory');
+                } else {
+                    $container->removeDefinition('messenger.transport.redis.factory');
+                }
+            }
         }
 
         $propertyInfo = new PropertyInfoConfigurator();
@@ -453,5 +508,213 @@ class CustomFrameworkExtensionsExtension extends Extension
         $container->setParameter('mailer_dsn', (string)$config['dsn']);
         $container->setParameter('mailer_default_email_from', (string)$config['default_email_from']);
         $container->setParameter('mailer_default_title', (string)$config['default_email_title']);
+    }
+
+    private function registerMessengerConfiguration(array $config, ContainerBuilder $container, array $validationConfig)
+    {
+        if (ContainerBuilder::willBeAvailable('symfony/amqp-messenger', AmqpTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+            $container->getDefinition('messenger.transport.amqp.factory')->addTag('messenger.transport_factory');
+        }
+
+        if (ContainerBuilder::willBeAvailable('symfony/redis-messenger', RedisTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+            $container->getDefinition('messenger.transport.redis.factory')->addTag('messenger.transport_factory');
+        }
+
+        if (ContainerBuilder::willBeAvailable('symfony/amazon-sqs-messenger', AmazonSqsTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+            $container->getDefinition('messenger.transport.sqs.factory')->addTag('messenger.transport_factory');
+        }
+
+        if (ContainerBuilder::willBeAvailable('symfony/beanstalkd-messenger', BeanstalkdTransportFactory::class, ['symfony/framework-bundle', 'symfony/messenger'])) {
+            $container->getDefinition('messenger.transport.beanstalkd.factory')->addTag('messenger.transport_factory');
+        }
+
+        if (null === $config['default_bus'] && 1 === \count($config['buses'])) {
+            $config['default_bus'] = key($config['buses']);
+        }
+
+        $defaultMiddleware = [
+            'before' => [
+                ['id' => 'add_bus_name_stamp_middleware'],
+                ['id' => 'reject_redelivered_message_middleware'],
+                ['id' => 'dispatch_after_current_bus'],
+                ['id' => 'failed_message_processing_middleware'],
+            ],
+            'after' => [
+                ['id' => 'send_message'],
+                ['id' => 'handle_message'],
+            ],
+        ];
+        foreach ($config['buses'] as $busId => $bus) {
+            $middleware = $bus['middleware'];
+
+            if ($bus['default_middleware']) {
+                if ('allow_no_handlers' === $bus['default_middleware']) {
+                    $defaultMiddleware['after'][1]['arguments'] = [true];
+                } else {
+                    unset($defaultMiddleware['after'][1]['arguments']);
+                }
+
+                // argument to add_bus_name_stamp_middleware
+                $defaultMiddleware['before'][0]['arguments'] = [$busId];
+
+                $middleware = array_merge($defaultMiddleware['before'], $middleware, $defaultMiddleware['after']);
+            }
+
+            foreach ($middleware as $middlewareItem) {
+                if (!$validationConfig['enabled'] && \in_array($middlewareItem['id'], ['validation', 'messenger.middleware.validation'], true)) {
+                    throw new LogicException('The Validation middleware is only available when the Validator component is installed and enabled. Try running "composer require symfony/validator".');
+                }
+            }
+
+            if ($container->getParameter('kernel.debug') && class_exists(Stopwatch::class)) {
+                array_unshift($middleware, ['id' => 'traceable', 'arguments' => [$busId]]);
+            }
+
+            $container->setParameter($busId.'.middleware', $middleware);
+            $container->register($busId, MessageBus::class)->addArgument([])->addTag('messenger.bus');
+
+            if ($busId === $config['default_bus']) {
+                $container->setAlias('messenger.default_bus', $busId)->setPublic(true);
+                $container->setAlias(MessageBusInterface::class, $busId);
+            } else {
+                $container->registerAliasForArgument($busId, MessageBusInterface::class);
+            }
+        }
+
+        if (empty($config['transports'])) {
+            $container->removeDefinition('messenger.transport.symfony_serializer');
+            $container->removeDefinition('messenger.transport.amqp.factory');
+            $container->removeDefinition('messenger.transport.redis.factory');
+            $container->removeDefinition('messenger.transport.sqs.factory');
+            $container->removeDefinition('messenger.transport.beanstalkd.factory');
+            $container->removeAlias(SerializerInterface::class);
+        } else {
+            $container->getDefinition('messenger.transport.symfony_serializer')
+                ->replaceArgument(1, $config['serializer']['symfony_serializer']['format'])
+                ->replaceArgument(2, $config['serializer']['symfony_serializer']['context']);
+            $container->setAlias('messenger.default_serializer', $config['serializer']['default_serializer']);
+        }
+
+        $failureTransports = [];
+        if ($config['failure_transport']) {
+            if (!isset($config['transports'][$config['failure_transport']])) {
+                throw new LogicException(sprintf('Invalid Messenger configuration: the failure transport "%s" is not a valid transport or service id.', $config['failure_transport']));
+            }
+
+            $container->setAlias('messenger.failure_transports.default', 'messenger.transport.'.$config['failure_transport']);
+            $failureTransports[] = $config['failure_transport'];
+        }
+
+        $failureTransportsByName = [];
+        foreach ($config['transports'] as $name => $transport) {
+            if ($transport['failure_transport']) {
+                $failureTransports[] = $transport['failure_transport'];
+                $failureTransportsByName[$name] = $transport['failure_transport'];
+            } elseif ($config['failure_transport']) {
+                $failureTransportsByName[$name] = $config['failure_transport'];
+            }
+        }
+
+        $senderAliases = [];
+        $transportRetryReferences = [];
+        foreach ($config['transports'] as $name => $transport) {
+            $serializerId = $transport['serializer'] ?? 'messenger.default_serializer';
+            $transportDefinition = (new Definition(TransportInterface::class))
+                ->setFactory([new Reference('messenger.transport_factory'), 'createTransport'])
+                ->setArguments([$transport['dsn'], $transport['options'] + ['transport_name' => $name], new Reference($serializerId)])
+                ->addTag('messenger.receiver', [
+                        'alias' => $name,
+                        'is_failure_transport' => \in_array($name, $failureTransports),
+                    ]
+                )
+            ;
+            $container->setDefinition($transportId = 'messenger.transport.'.$name, $transportDefinition);
+            $senderAliases[$name] = $transportId;
+
+            if (null !== $transport['retry_strategy']['service']) {
+                $transportRetryReferences[$name] = new Reference($transport['retry_strategy']['service']);
+            } else {
+                $retryServiceId = sprintf('messenger.retry.multiplier_retry_strategy.%s', $name);
+                $retryDefinition = new ChildDefinition('messenger.retry.abstract_multiplier_retry_strategy');
+                $retryDefinition
+                    ->replaceArgument(0, $transport['retry_strategy']['max_retries'])
+                    ->replaceArgument(1, $transport['retry_strategy']['delay'])
+                    ->replaceArgument(2, $transport['retry_strategy']['multiplier'])
+                    ->replaceArgument(3, $transport['retry_strategy']['max_delay']);
+                $container->setDefinition($retryServiceId, $retryDefinition);
+
+                $transportRetryReferences[$name] = new Reference($retryServiceId);
+            }
+        }
+
+        $senderReferences = [];
+        // alias => service_id
+        foreach ($senderAliases as $alias => $serviceId) {
+            $senderReferences[$alias] = new Reference($serviceId);
+        }
+        // service_id => service_id
+        foreach ($senderAliases as $serviceId) {
+            $senderReferences[$serviceId] = new Reference($serviceId);
+        }
+
+        foreach ($config['transports'] as $name => $transport) {
+            if ($transport['failure_transport']) {
+                if (!isset($senderReferences[$transport['failure_transport']])) {
+                    throw new LogicException(sprintf('Invalid Messenger configuration: the failure transport "%s" is not a valid transport or service id.', $transport['failure_transport']));
+                }
+            }
+        }
+
+        $failureTransportReferencesByTransportName = array_map(function ($failureTransportName) use ($senderReferences) {
+            return $senderReferences[$failureTransportName];
+        }, $failureTransportsByName);
+
+        $messageToSendersMapping = [];
+        foreach ($config['routing'] as $message => $messageConfiguration) {
+            if ('*' !== $message && !class_exists($message) && !interface_exists($message, false)) {
+                throw new LogicException(sprintf('Invalid Messenger routing configuration: class or interface "%s" not found.', $message));
+            }
+
+            // make sure senderAliases contains all senders
+            foreach ($messageConfiguration['senders'] as $sender) {
+                if (!isset($senderReferences[$sender])) {
+                    throw new LogicException(sprintf('Invalid Messenger routing configuration: the "%s" class is being routed to a sender called "%s". This is not a valid transport or service id.', $message, $sender));
+                }
+            }
+
+            $messageToSendersMapping[$message] = $messageConfiguration['senders'];
+        }
+
+        $sendersServiceLocator = ServiceLocatorTagPass::register($container, $senderReferences);
+
+        $container->getDefinition('messenger.senders_locator')
+            ->replaceArgument(0, $messageToSendersMapping)
+            ->replaceArgument(1, $sendersServiceLocator)
+        ;
+
+        $container->getDefinition('messenger.retry.send_failed_message_for_retry_listener')
+            ->replaceArgument(0, $sendersServiceLocator)
+        ;
+
+        $container->getDefinition('messenger.retry_strategy_locator')
+            ->replaceArgument(0, $transportRetryReferences);
+
+        if (\count($failureTransports) > 0) {
+            $container->getDefinition('console.command.messenger_failed_messages_retry')
+                ->replaceArgument(0, $config['failure_transport']);
+            $container->getDefinition('console.command.messenger_failed_messages_show')
+                ->replaceArgument(0, $config['failure_transport']);
+            $container->getDefinition('console.command.messenger_failed_messages_remove')
+                ->replaceArgument(0, $config['failure_transport']);
+
+            $failureTransportsByTransportNameServiceLocator = ServiceLocatorTagPass::register($container, $failureTransportReferencesByTransportName);
+            $container->getDefinition('messenger.failure.send_failed_message_to_failure_transport_listener')
+                ->replaceArgument(0, $failureTransportsByTransportNameServiceLocator);
+        } else {
+            $container->removeDefinition('messenger.failure.send_failed_message_to_failure_transport_listener');
+            $container->removeDefinition('console.command.messenger_failed_messages_retry');
+            $container->removeDefinition('console.command.messenger_failed_messages_show');
+            $container->removeDefinition('console.command.messenger_failed_messages_remove');
+        }
     }
 }

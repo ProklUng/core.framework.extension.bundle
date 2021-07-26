@@ -102,6 +102,9 @@ framework:
 
   mailer:
     enabled: true
+
+  messenger:
+    enabled: true
 ```
 
 ## Консольные команды
@@ -129,6 +132,8 @@ framework:
 ### Serializer
 
 ### Secrets
+
+### Messenger
 
 ### Mailer
 
