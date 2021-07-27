@@ -573,7 +573,10 @@ class CustomFrameworkExtensionsExtension extends Extension
 
         $container->setParameter('mailer_dsn_file', (string)$config['dsn_file']);
         $container->setParameter('mailer_dsn', (string)$config['dsn']);
-        $container->setParameter('mailer_default_email_from', (string)$config['default_email_from']);
+        $container->setParameter(
+            'mailer_default_email_from',
+            $config['default_email_from'] ?? (string)$sender
+        );
         $container->setParameter('mailer_default_title', (string)$config['default_email_title']);
 
         $this->mailerConfigEnabled = true;

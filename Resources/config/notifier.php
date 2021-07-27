@@ -11,7 +11,9 @@
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use Prokl\CustomFrameworkExtensionsBundle\Services\Notifier\CustomEmailChannel;
 use Symfony\Bridge\Monolog\Handler\NotifierHandler;
+use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Notifier\Channel\BrowserChannel;
 use Symfony\Component\Notifier\Channel\ChannelPolicy;
 use Symfony\Component\Notifier\Channel\ChatChannel;
@@ -32,6 +34,29 @@ use Symfony\Component\Notifier\Transport;
 use Symfony\Component\Notifier\Transport\Transports;
 
 return static function (ContainerConfigurator $container) {
+
+    // Mailer должен присутствовать.
+    if (class_exists(Mailer::class)) {
+        $missingPackages = [];
+        if (!class_exists(CssInlinerExtension::class)) {
+            $missingPackages['twig/cssinliner-extra'] = ' CSS Inliner';
+        }
+
+        if (!class_exists(InkyExtension::class)) {
+            $missingPackages['twig/inky-extra'] = 'Inky';
+        }
+
+        $classEmailChannel = count($missingPackages) === 0 ? EmailChannel::class : CustomEmailChannel::class;
+
+        $container->services()
+            ->set('notifier.channel.email', $classEmailChannel)
+            ->args([service('mailer.transports'),
+                service('messenger.default_bus')->ignoreOnInvalid(),
+                $classEmailChannel === CustomEmailChannel::class ? param('mailer_default_email_from') : null
+            ])
+            ->tag('notifier.channel', ['channel' => 'email']);
+    }
+
     $container->services()
         ->set('notifier', Notifier::class)
             ->args([tagged_locator('notifier.channel', 'channel'), service('notifier.channel_policy')->ignoreOnInvalid()])
@@ -52,10 +77,6 @@ return static function (ContainerConfigurator $container) {
         ->set('notifier.channel.sms', SmsChannel::class)
             ->args([service('texter.transports'), service('messenger.default_bus')->ignoreOnInvalid()])
             ->tag('notifier.channel', ['channel' => 'sms'])
-
-        ->set('notifier.channel.email', EmailChannel::class)
-            ->args([service('mailer.transports'), service('messenger.default_bus')->ignoreOnInvalid()])
-            ->tag('notifier.channel', ['channel' => 'email'])
 
         ->set('notifier.monolog_handler', NotifierHandler::class)
             ->args([service('notifier')])
