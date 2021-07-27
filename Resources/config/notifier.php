@@ -89,6 +89,7 @@ return static function (ContainerConfigurator $container) {
                 service('messenger.default_bus')->ignoreOnInvalid(),
                 service('event_dispatcher')->ignoreOnInvalid(),
             ])
+            ->public()
 
         ->alias(TexterInterface::class, 'texter')
 
