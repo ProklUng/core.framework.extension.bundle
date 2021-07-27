@@ -69,7 +69,7 @@ return static function (ContainerConfigurator $container) {
                 service('messenger.default_bus')->ignoreOnInvalid(),
                 service('event_dispatcher')->ignoreOnInvalid(),
             ])
-
+        ->public()
         ->alias(ChatterInterface::class, 'chatter')
 
         ->set('chatter.transports', Transports::class)
