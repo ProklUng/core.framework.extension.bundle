@@ -59,7 +59,8 @@
     "symfony/polyfill-php80": "^1.20",
     "symfony/twig-bridge": "^4.0 || ^5.0",
     "symfony/expression-language": "^5.2",
-    "spiral/attributes": "^2.8"
+    "spiral/attributes": "^2.8",
+    "league/html-to-markdown": "^5.0"
   },
   "require-dev": {
     "proklung/phpunit-testing-tools": "^1.0"
