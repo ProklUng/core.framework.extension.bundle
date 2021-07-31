@@ -11,10 +11,14 @@ use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\Prop
 use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\SecretConfigurator;
 use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\SerializerConfigurator;
 use Prokl\CustomFrameworkExtensionsBundle\Extra\DoctrineDbalExtension;
+use Psr\Log\LoggerAwareInterface;
 use RuntimeException;
 use Spiral\Attributes\ReaderInterface;
 use Symfony\Bridge\Twig\Extension\CsrfExtension;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\FrameworkBundle\Routing\RouteLoaderInterface;
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\Config\ResourceCheckerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
@@ -29,6 +33,12 @@ use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\DependencyInjection\ServiceLocator;
+use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpKernel\CacheClearer\CacheClearerInterface;
+use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
+use Symfony\Component\HttpKernel\Controller\ArgumentValueResolverInterface;
+use Symfony\Component\HttpKernel\DataCollector\DataCollectorInterface;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\HttpKernel\HttpCache\StoreInterface;
 use Symfony\Component\HttpKernel\Kernel;
@@ -40,8 +50,21 @@ use Symfony\Component\Lock\Store\StoreFactory;
 use Symfony\Component\Mailer\Bridge\Google\Transport\GmailTransportFactory;
 use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
+use Symfony\Component\Messenger\Transport\TransportFactoryInterface;
+use Symfony\Component\Mime\MimeTypeGuesserInterface;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
+use Symfony\Component\PropertyInfo\PropertyAccessExtractorInterface;
+use Symfony\Component\PropertyInfo\PropertyDescriptionExtractorInterface;
+use Symfony\Component\PropertyInfo\PropertyInitializableExtractorInterface;
+use Symfony\Component\PropertyInfo\PropertyListExtractorInterface;
 use Symfony\Component\PropertyInfo\PropertyReadInfoExtractorInterface;
+use Symfony\Component\PropertyInfo\PropertyTypeExtractorInterface;
+use Symfony\Component\Serializer\Encoder\DecoderInterface;
+use Symfony\Component\Serializer\Encoder\EncoderInterface;
+use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
+use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
+use Symfony\Component\Validator\ConstraintValidatorInterface;
+use Symfony\Component\Validator\ObjectInitializerInterface;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 use Symfony\Component\Messenger\MessageBus;
@@ -84,6 +107,9 @@ use Symfony\Component\Notifier\Bridge\Twilio\TwilioTransportFactory;
 use Symfony\Component\Notifier\Bridge\Zulip\ZulipTransportFactory;
 use Symfony\Component\Notifier\Notifier;
 use Symfony\Component\Notifier\Recipient\Recipient;
+use Symfony\Contracts\Cache\CallbackInterface;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\Service\ServiceSubscriberInterface;
 
 /**
  * Class CustomFrameworkExtensionsExtension
@@ -328,6 +354,63 @@ class CustomFrameworkExtensionsExtension extends Extension
             ->addTag('container.env_var_processor');
         $container->registerForAutoconfiguration(MessageHandlerInterface::class)
             ->addTag('messenger.message_handler');
+        $container->registerForAutoconfiguration(ResourceCheckerInterface::class)
+            ->addTag('config_cache.resource_checker');
+        $container->registerForAutoconfiguration(CallbackInterface::class)
+            ->addTag('container.reversible');
+        $container->registerForAutoconfiguration(ServiceLocator::class)
+            ->addTag('container.service_locator');
+        $container->registerForAutoconfiguration(ServiceSubscriberInterface::class)
+            ->addTag('container.service_subscriber');
+        $container->registerForAutoconfiguration(ArgumentValueResolverInterface::class)
+            ->addTag('controller.argument_value_resolver');
+        $container->registerForAutoconfiguration(AbstractController::class)
+            ->addTag('controller.service_arguments');
+        $container->registerForAutoconfiguration(DataCollectorInterface::class)
+            ->addTag('data_collector');
+        $container->registerForAutoconfiguration(CacheClearerInterface::class)
+            ->addTag('kernel.cache_clearer');
+        $container->registerForAutoconfiguration(CacheWarmerInterface::class)
+            ->addTag('kernel.cache_warmer');
+        $container->registerForAutoconfiguration(EventDispatcherInterface::class)
+            ->addTag('event_dispatcher.dispatcher');
+        $container->registerForAutoconfiguration(EventSubscriberInterface::class)
+            ->addTag('kernel.event_subscriber');
+
+        $container->registerForAutoconfiguration(PropertyListExtractorInterface::class)
+            ->addTag('property_info.list_extractor');
+        $container->registerForAutoconfiguration(PropertyTypeExtractorInterface::class)
+            ->addTag('property_info.type_extractor');
+        $container->registerForAutoconfiguration(PropertyDescriptionExtractorInterface::class)
+            ->addTag('property_info.description_extractor');
+        $container->registerForAutoconfiguration(PropertyAccessExtractorInterface::class)
+            ->addTag('property_info.access_extractor');
+        $container->registerForAutoconfiguration(PropertyInitializableExtractorInterface::class)
+            ->addTag('property_info.initializable_extractor');
+        $container->registerForAutoconfiguration(EncoderInterface::class)
+            ->addTag('serializer.encoder');
+        $container->registerForAutoconfiguration(DecoderInterface::class)
+            ->addTag('serializer.encoder');
+        $container->registerForAutoconfiguration(NormalizerInterface::class)
+            ->addTag('serializer.normalizer');
+        $container->registerForAutoconfiguration(DenormalizerInterface::class)
+            ->addTag('serializer.normalizer');
+        $container->registerForAutoconfiguration(ConstraintValidatorInterface::class)
+            ->addTag('validator.constraint_validator');
+        $container->registerForAutoconfiguration(ObjectInitializerInterface::class)
+            ->addTag('validator.initializer');
+        $container->registerForAutoconfiguration(MessageHandlerInterface::class)
+            ->addTag('messenger.message_handler');
+        $container->registerForAutoconfiguration(TransportFactoryInterface::class)
+            ->addTag('messenger.transport_factory');
+        $container->registerForAutoconfiguration(MimeTypeGuesserInterface::class)
+            ->addTag('mime.mime_type_guesser');
+
+        $container->registerForAutoconfiguration(LoggerAwareInterface::class)
+            ->addMethodCall('setLogger', [new Reference('logger')]);
+
+        $container->registerForAutoconfiguration(RouteLoaderInterface::class)
+            ->addTag('routing.route_loader');
     }
 
     /**
