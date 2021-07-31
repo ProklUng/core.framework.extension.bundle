@@ -15,6 +15,7 @@ use RuntimeException;
 use Spiral\Attributes\ReaderInterface;
 use Symfony\Bridge\Twig\Extension\CsrfExtension;
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
 use Symfony\Component\DependencyInjection\ChildDefinition;
@@ -22,11 +23,14 @@ use Symfony\Component\DependencyInjection\Compiler\ServiceLocatorTagPass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
+use Symfony\Component\DependencyInjection\EnvVarLoaderInterface;
+use Symfony\Component\DependencyInjection\EnvVarProcessorInterface;
 use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
+use Symfony\Component\HttpKernel\HttpCache\StoreInterface;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Lock\Lock;
 use Symfony\Component\Lock\LockFactory;
@@ -299,7 +303,7 @@ class CustomFrameworkExtensionsExtension extends Extension
             $this->registerNotifierConfiguration($config['notifier'], $container);
         }
 
-        if (!empty($config['lock']) && $config['lock']['enabled'] === true) {
+        if (!empty($config['lock'])) {
             $loaderPhp->load('lock.php');
             $this->registerLockConfiguration($config['lock'], $container);
         }
