@@ -12,6 +12,8 @@ use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\HttpFoundation\Cookie;
+use Symfony\Component\Lock\Lock;
+use Symfony\Component\Lock\Store\SemaphoreStore;
 use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Notifier\Notifier;
@@ -58,6 +60,7 @@ final class Configuration implements ConfigurationInterface
         $this->addMailerSection($rootNode);
         $this->addMessengerSection($rootNode);
         $this->addNotifierSection($rootNode, $enableIfStandalone);
+        $this->addLockSection($rootNode, $enableIfStandalone);
 
         $dbalConfig = new DbalConfiguration();
         $dbalConfig->addDbalSection($rootNode);
@@ -722,5 +725,67 @@ final class Configuration implements ConfigurationInterface
         }
 
         return false;
+    }
+
+    private function addLockSection(ArrayNodeDefinition $rootNode, callable $enableIfStandalone)
+    {
+        $rootNode
+            ->children()
+            ->arrayNode('lock')
+            ->info('Lock configuration')
+            ->{$enableIfStandalone('symfony/lock', Lock::class)}()
+            ->beforeNormalization()
+            ->ifString()->then(function ($v) { return ['enabled' => true, 'resources' => $v]; })
+            ->end()
+            ->beforeNormalization()
+            ->ifTrue(function ($v) { return \is_array($v) && !isset($v['enabled']); })
+            ->then(function ($v) { return $v + ['enabled' => true]; })
+            ->end()
+            ->beforeNormalization()
+            ->ifTrue(function ($v) { return \is_array($v) && !isset($v['resources']) && !isset($v['resource']); })
+            ->then(function ($v) {
+                $e = $v['enabled'];
+                unset($v['enabled']);
+
+                return ['enabled' => $e, 'resources' => $v];
+            })
+            ->end()
+            ->addDefaultsIfNotSet()
+            ->fixXmlConfig('resource')
+            ->children()
+            ->arrayNode('resources')
+            ->normalizeKeys(false)
+            ->useAttributeAsKey('name')
+            ->requiresAtLeastOneElement()
+            ->defaultValue(['default' => [class_exists(SemaphoreStore::class) && SemaphoreStore::isSupported() ? 'semaphore' : 'flock']])
+            ->beforeNormalization()
+            ->ifString()->then(function ($v) { return ['default' => $v]; })
+            ->end()
+            ->beforeNormalization()
+            ->ifTrue(function ($v) { return \is_array($v) && array_keys($v) === range(0, \count($v) - 1); })
+            ->then(function ($v) {
+                $resources = [];
+                foreach ($v as $resource) {
+                    $resources = array_merge_recursive(
+                        $resources,
+                        \is_array($resource) && isset($resource['name'])
+                            ? [$resource['name'] => $resource['value']]
+                            : ['default' => $resource]
+                    );
+                }
+
+                return $resources;
+            })
+            ->end()
+            ->prototype('array')
+            ->performNoDeepMerging()
+            ->beforeNormalization()->ifString()->then(function ($v) { return [$v]; })->end()
+            ->prototype('scalar')->end()
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+        ;
     }
 }

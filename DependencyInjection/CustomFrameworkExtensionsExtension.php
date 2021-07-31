@@ -28,6 +28,11 @@ use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\HttpKernel\Kernel;
+use Symfony\Component\Lock\Lock;
+use Symfony\Component\Lock\LockFactory;
+use Symfony\Component\Lock\LockInterface;
+use Symfony\Component\Lock\PersistingStoreInterface;
+use Symfony\Component\Lock\Store\StoreFactory;
 use Symfony\Component\Mailer\Bridge\Google\Transport\GmailTransportFactory;
 use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Messenger\Transport\Serialization\SerializerInterface;
@@ -292,6 +297,11 @@ class CustomFrameworkExtensionsExtension extends Extension
             $loaderPhp->load('notifier.php');
             $loaderPhp->load('notifier_transports.php');
             $this->registerNotifierConfiguration($config['notifier'], $container);
+        }
+
+        if (!empty($config['lock']) && $config['lock']['enabled'] === true) {
+            $loaderPhp->load('lock.php');
+            $this->registerLockConfiguration($config['lock'], $container);
         }
 
         $propertyInfo = new PropertyInfoConfigurator();
@@ -912,6 +922,66 @@ class CustomFrameworkExtensionsExtension extends Extension
                 $id = 'notifier.admin_recipient.'.$i;
                 $container->setDefinition($id, new Definition(Recipient::class, [$recipient['email'], $recipient['phone']]));
                 $notifier->addMethodCall('addAdminRecipient', [new Reference($id)]);
+            }
+        }
+    }
+
+    private function registerLockConfiguration(array $config, ContainerBuilder $container)
+    {
+        foreach ($config['resources'] as $resourceName => $resourceStores) {
+            if (0 === \count($resourceStores)) {
+                continue;
+            }
+
+            // Generate stores
+            $storeDefinitions = [];
+            foreach ($resourceStores as $storeDsn) {
+                $storeDsn = $container->resolveEnvPlaceholders($storeDsn, null, $usedEnvs);
+                $storeDefinition = new Definition(interface_exists(StoreInterface::class) ? StoreInterface::class : PersistingStoreInterface::class);
+                $storeDefinition->setFactory([StoreFactory::class, 'createStore']);
+                $storeDefinition->setArguments([$storeDsn]);
+
+                $container->setDefinition($storeDefinitionId = '.lock.'.$resourceName.'.store.'.$container->hash($storeDsn), $storeDefinition);
+
+                $storeDefinition = new Reference($storeDefinitionId);
+
+                $storeDefinitions[] = $storeDefinition;
+            }
+
+            // Wrap array of stores with CombinedStore
+            if (\count($storeDefinitions) > 1) {
+                $combinedDefinition = new ChildDefinition('lock.store.combined.abstract');
+                $combinedDefinition->replaceArgument(0, $storeDefinitions);
+                $container->setDefinition('lock.'.$resourceName.'.store', $combinedDefinition)->setDeprecated('symfony/framework-bundle', '5.2', 'The "%service_id%" service is deprecated, use "lock.'.$resourceName.'.factory" instead.');
+                $container->setDefinition($storeDefinitionId = '.lock.'.$resourceName.'.store.'.$container->hash($resourceStores), $combinedDefinition);
+            } else {
+                $container->setAlias('lock.'.$resourceName.'.store', (new Alias($storeDefinitionId, false))->setDeprecated('symfony/framework-bundle', '5.2', 'The "%alias_id%" alias is deprecated, use "lock.'.$resourceName.'.factory" instead.'));
+            }
+
+            // Generate factories for each resource
+            $factoryDefinition = new ChildDefinition('lock.factory.abstract');
+            $factoryDefinition->replaceArgument(0, new Reference($storeDefinitionId));
+            $container->setDefinition('lock.'.$resourceName.'.factory', $factoryDefinition);
+
+            // Generate services for lock instances
+            $lockDefinition = new Definition(Lock::class);
+            $lockDefinition->setPublic(false);
+            $lockDefinition->setFactory([new Reference('lock.'.$resourceName.'.factory'), 'createLock']);
+            $lockDefinition->setArguments([$resourceName]);
+            $container->setDefinition('lock.'.$resourceName, $lockDefinition)->setDeprecated('symfony/framework-bundle', '5.2', 'The "%service_id%" service is deprecated, use "lock.'.$resourceName.'.factory" instead.');
+
+            // provide alias for default resource
+            if ('default' === $resourceName) {
+                $container->setAlias('lock.store', (new Alias($storeDefinitionId, false))->setDeprecated('symfony/framework-bundle', '5.2', 'The "%alias_id%" alias is deprecated, use "lock.factory" instead.'));
+                $container->setAlias('lock.factory', new Alias('lock.'.$resourceName.'.factory', false));
+                $container->setAlias('lock', (new Alias('lock.'.$resourceName, false))->setDeprecated('symfony/framework-bundle', '5.2', 'The "%alias_id%" alias is deprecated, use "lock.factory" instead.'));
+                $container->setAlias(PersistingStoreInterface::class, (new Alias($storeDefinitionId, false))->setDeprecated('symfony/framework-bundle', '5.2', 'The "%alias_id%" alias is deprecated, use "'.LockFactory::class.'" instead.'));
+                $container->setAlias(LockFactory::class, new Alias('lock.factory', false));
+                $container->setAlias(LockInterface::class, (new Alias('lock.'.$resourceName, false))->setDeprecated('symfony/framework-bundle', '5.2', 'The "%alias_id%" alias is deprecated, use "'.LockFactory::class.'" instead.'));
+            } else {
+                $container->registerAliasForArgument($storeDefinitionId, PersistingStoreInterface::class, $resourceName.'.lock.store')->setDeprecated('symfony/framework-bundle', '5.2', 'The "%alias_id%" alias is deprecated, use "'.LockFactory::class.' '.$resourceName.'LockFactory" instead.');
+                $container->registerAliasForArgument('lock.'.$resourceName.'.factory', LockFactory::class, $resourceName.'.lock.factory');
+                $container->registerAliasForArgument('lock.'.$resourceName, LockInterface::class, $resourceName.'.lock')->setDeprecated('symfony/framework-bundle', '5.2', 'The "%alias_id%" alias is deprecated, use "'.LockFactory::class.' $'.$resourceName.'LockFactory" instead.');
             }
         }
     }

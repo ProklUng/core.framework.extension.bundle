@@ -108,6 +108,10 @@ framework:
 
   notifier:
     enabled: true
+
+  lock:
+    enabled: true
+    resources: ~
 ```
 
 ## Консольные команды
@@ -135,6 +139,10 @@ framework:
 ### Serializer
 
 ### Secrets
+
+### Lock
+
+[док](https://symfony.com/doc/current/lock.html#configuring-lock-with-frameworkbundle)
 
 ### Notifier
 
