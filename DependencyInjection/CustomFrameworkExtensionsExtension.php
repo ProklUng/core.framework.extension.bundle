@@ -354,18 +354,11 @@ class CustomFrameworkExtensionsExtension extends Extension
             ->addTag('container.env_var_processor');
         $container->registerForAutoconfiguration(MessageHandlerInterface::class)
             ->addTag('messenger.message_handler');
-        $container->registerForAutoconfiguration(ResourceCheckerInterface::class)
-            ->addTag('config_cache.resource_checker');
+
         $container->registerForAutoconfiguration(CallbackInterface::class)
             ->addTag('container.reversible');
-        $container->registerForAutoconfiguration(ServiceLocator::class)
-            ->addTag('container.service_locator');
         $container->registerForAutoconfiguration(ServiceSubscriberInterface::class)
             ->addTag('container.service_subscriber');
-        $container->registerForAutoconfiguration(ArgumentValueResolverInterface::class)
-            ->addTag('controller.argument_value_resolver');
-        $container->registerForAutoconfiguration(AbstractController::class)
-            ->addTag('controller.service_arguments');
         $container->registerForAutoconfiguration(DataCollectorInterface::class)
             ->addTag('data_collector');
         $container->registerForAutoconfiguration(CacheClearerInterface::class)
@@ -374,8 +367,6 @@ class CustomFrameworkExtensionsExtension extends Extension
             ->addTag('kernel.cache_warmer');
         $container->registerForAutoconfiguration(EventDispatcherInterface::class)
             ->addTag('event_dispatcher.dispatcher');
-        $container->registerForAutoconfiguration(EventSubscriberInterface::class)
-            ->addTag('kernel.event_subscriber');
 
         $container->registerForAutoconfiguration(PropertyListExtractorInterface::class)
             ->addTag('property_info.list_extractor');
@@ -387,18 +378,7 @@ class CustomFrameworkExtensionsExtension extends Extension
             ->addTag('property_info.access_extractor');
         $container->registerForAutoconfiguration(PropertyInitializableExtractorInterface::class)
             ->addTag('property_info.initializable_extractor');
-        $container->registerForAutoconfiguration(EncoderInterface::class)
-            ->addTag('serializer.encoder');
-        $container->registerForAutoconfiguration(DecoderInterface::class)
-            ->addTag('serializer.encoder');
-        $container->registerForAutoconfiguration(NormalizerInterface::class)
-            ->addTag('serializer.normalizer');
-        $container->registerForAutoconfiguration(DenormalizerInterface::class)
-            ->addTag('serializer.normalizer');
-        $container->registerForAutoconfiguration(ConstraintValidatorInterface::class)
-            ->addTag('validator.constraint_validator');
-        $container->registerForAutoconfiguration(ObjectInitializerInterface::class)
-            ->addTag('validator.initializer');
+
         $container->registerForAutoconfiguration(MessageHandlerInterface::class)
             ->addTag('messenger.message_handler');
         $container->registerForAutoconfiguration(TransportFactoryInterface::class)
