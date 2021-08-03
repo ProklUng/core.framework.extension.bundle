@@ -27,6 +27,7 @@ use Symfony\Bundle\FrameworkBundle\Command\SecretsListCommand;
 use Symfony\Bundle\FrameworkBundle\Command\SecretsRemoveCommand;
 use Symfony\Bundle\FrameworkBundle\Command\SecretsSetCommand;
 use Prokl\CustomFrameworkExtensionsBundle\Command\Fork\YamlLintCommand;
+use Prokl\CustomFrameworkExtensionsBundle\Command\Fork\CacheWarmupCommand;
 use Symfony\Bundle\FrameworkBundle\EventListener\SuggestMissingPackageSubscriber;
 use Symfony\Component\Console\EventListener\ErrorListener;
 use Symfony\Component\Messenger\Command\ConsumeMessagesCommand;
@@ -191,6 +192,13 @@ return static function (ContainerConfigurator $container) {
         ->args([
             service('secrets.vault'),
             service('secrets.local_vault'),
+        ])
+        ->tag('console.command')
+
+        ->set('console.command.cache_warmup', CacheWarmupCommand::class)
+        ->args([
+            service('cache_warmer'),
+            service('kernel'),
         ])
         ->tag('console.command')
 
