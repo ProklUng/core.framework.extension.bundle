@@ -23,7 +23,7 @@ use Symfony\Bundle\FrameworkBundle\Command\SecretsGenerateKeysCommand;
 use Symfony\Bundle\FrameworkBundle\Command\SecretsListCommand;
 use Symfony\Bundle\FrameworkBundle\Command\SecretsRemoveCommand;
 use Symfony\Bundle\FrameworkBundle\Command\SecretsSetCommand;
-use Symfony\Bundle\FrameworkBundle\Command\YamlLintCommand;
+use Prokl\CustomFrameworkExtensionsBundle\Command\Fork\YamlLintCommand;
 use Symfony\Bundle\FrameworkBundle\EventListener\SuggestMissingPackageSubscriber;
 use Symfony\Component\Console\EventListener\ErrorListener;
 use Symfony\Component\Messenger\Command\ConsumeMessagesCommand;
@@ -146,6 +146,7 @@ return static function (ContainerConfigurator $container) {
         ->tag('console.command')
 
         ->set('console.command.yaml_lint', YamlLintCommand::class)
+        ->args([service('kernel')])
         ->tag('console.command')
 
         ->set('console.command.secrets_set', SecretsSetCommand::class)
