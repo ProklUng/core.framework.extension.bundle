@@ -29,6 +29,14 @@ services:
     tags:
       - { name: console.command, comand: debug:autowiring }
 
+  console.command.config_debug:
+    class: Prokl\CustomFrameworkExtensionsBundle\Command\Fork\ConfigDebugCommand
+    calls:
+      - setContainer: ['@service_container']
+    arguments: [~]
+    tags:
+      - { name: console.command, comand: debug:config }
+
   console.command.dump_reference:
     class: Prokl\CustomFrameworkExtensionsBundle\Command\Fork\ConfigDumpReferenceCommand
     calls:

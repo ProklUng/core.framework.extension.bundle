@@ -14,7 +14,6 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use Symfony\Bundle\FrameworkBundle\Command\AboutCommand;
 use Symfony\Bundle\FrameworkBundle\Command\AssetsInstallCommand;
 use Symfony\Bundle\FrameworkBundle\Command\CachePoolListCommand;
-use Symfony\Bundle\FrameworkBundle\Command\ConfigDebugCommand;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerLintCommand;
 use Symfony\Bundle\FrameworkBundle\Command\RouterDebugCommand;
 use Symfony\Bundle\FrameworkBundle\Command\RouterMatchCommand;
@@ -65,9 +64,6 @@ return static function (ContainerConfigurator $container) {
         ->args([
             null,
         ])
-        ->tag('console.command')
-
-        ->set('console.command.config_debug', ConfigDebugCommand::class)
         ->tag('console.command')
 
         ->set('console.command.container_lint', ContainerLintCommand::class)
