@@ -13,6 +13,8 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use Symfony\Bundle\FrameworkBundle\Command\AboutCommand;
 use Symfony\Bundle\FrameworkBundle\Command\AssetsInstallCommand;
+use Symfony\Bundle\FrameworkBundle\Command\CachePoolClearCommand;
+use Symfony\Bundle\FrameworkBundle\Command\CachePoolDeleteCommand;
 use Symfony\Bundle\FrameworkBundle\Command\CachePoolListCommand;
 use Symfony\Bundle\FrameworkBundle\Command\CachePoolPruneCommand;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerLintCommand;
@@ -195,6 +197,18 @@ return static function (ContainerConfigurator $container) {
         ->set('console.command.cache_pool_prune', CachePoolPruneCommand::class)
         ->args([
             [],
+        ])
+        ->tag('console.command')
+
+        ->set('console.command.cache_pool_delete', CachePoolDeleteCommand::class)
+        ->args([
+            service('cache.global_clearer'),
+        ])
+        ->tag('console.command')
+
+        ->set('console.command.cache_pool_clear', CachePoolClearCommand::class)
+        ->args([
+            service('cache.global_clearer'),
         ])
         ->tag('console.command')
     ;
