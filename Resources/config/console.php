@@ -14,6 +14,7 @@ namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 use Symfony\Bundle\FrameworkBundle\Command\AboutCommand;
 use Symfony\Bundle\FrameworkBundle\Command\AssetsInstallCommand;
 use Symfony\Bundle\FrameworkBundle\Command\CachePoolListCommand;
+use Symfony\Bundle\FrameworkBundle\Command\CachePoolPruneCommand;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerLintCommand;
 use Symfony\Bundle\FrameworkBundle\Command\RouterDebugCommand;
 use Symfony\Bundle\FrameworkBundle\Command\RouterMatchCommand;
@@ -188,6 +189,12 @@ return static function (ContainerConfigurator $container) {
         ->args([
             service('secrets.vault'),
             service('secrets.local_vault'),
+        ])
+        ->tag('console.command')
+
+        ->set('console.command.cache_pool_prune', CachePoolPruneCommand::class)
+        ->args([
+            [],
         ])
         ->tag('console.command')
     ;

@@ -46,7 +46,7 @@ framework:
   pools:
     my_cache_pool:
       public: true
-      provider: cache.adapter.filesystem
+      adapter: cache.adapter.filesystem
       default_lifetime: 600
   twig:
     # Пути к шаблонам

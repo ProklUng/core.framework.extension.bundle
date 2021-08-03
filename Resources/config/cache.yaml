@@ -9,10 +9,6 @@ services:
     autoconfigure: true
     public: true
 
-  cache.adapter.filesystem:
-    class: Symfony\Component\Cache\Adapter\FilesystemAdapter
-    arguments: ['', 3600,'%kernel.cache_dir%/pools']
-
   cache.adapter.array:
     class: Symfony\Component\Cache\Adapter\ArrayAdapter
     arguments: [0]
