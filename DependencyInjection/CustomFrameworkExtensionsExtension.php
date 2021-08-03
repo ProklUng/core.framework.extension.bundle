@@ -15,10 +15,8 @@ use Psr\Log\LoggerAwareInterface;
 use RuntimeException;
 use Spiral\Attributes\ReaderInterface;
 use Symfony\Bridge\Twig\Extension\CsrfExtension;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\FrameworkBundle\Routing\RouteLoaderInterface;
 use Symfony\Component\Config\FileLocator;
-use Symfony\Component\Config\ResourceCheckerInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
@@ -33,11 +31,8 @@ use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\DependencyInjection\ServiceLocator;
-use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\CacheClearer\CacheClearerInterface;
 use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
-use Symfony\Component\HttpKernel\Controller\ArgumentValueResolverInterface;
 use Symfony\Component\HttpKernel\DataCollector\DataCollectorInterface;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\HttpKernel\HttpCache\StoreInterface;
@@ -192,6 +187,8 @@ class CustomFrameworkExtensionsExtension extends Extension
 
         if (!empty($config['cache']) && $config['cache']['enabled'] === true) {
             $loader->load('cache.yaml');
+            $loaderPhp->load('cache.php');
+
             $cacheConfig = new CacheConfiguration();
             $cacheConfig->register(
                 $config['cache'],

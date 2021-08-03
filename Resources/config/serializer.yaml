@@ -116,6 +116,7 @@ services:
 
   serializer.mapping.cache_warmer:
     class: Symfony\Bundle\FrameworkBundle\CacheWarmer\SerializerCacheWarmer
+    autoconfigure: false
     arguments:
       - []
       - '%serializer.mapping.cache.file%'
