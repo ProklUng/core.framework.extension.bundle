@@ -23,7 +23,6 @@ use Symfony\Bundle\FrameworkBundle\Command\SecretsGenerateKeysCommand;
 use Symfony\Bundle\FrameworkBundle\Command\SecretsListCommand;
 use Symfony\Bundle\FrameworkBundle\Command\SecretsRemoveCommand;
 use Symfony\Bundle\FrameworkBundle\Command\SecretsSetCommand;
-use Symfony\Bundle\FrameworkBundle\Command\WorkflowDumpCommand;
 use Symfony\Bundle\FrameworkBundle\Command\YamlLintCommand;
 use Symfony\Bundle\FrameworkBundle\EventListener\SuggestMissingPackageSubscriber;
 use Symfony\Component\Console\EventListener\ErrorListener;
@@ -141,10 +140,6 @@ return static function (ContainerConfigurator $container) {
         ->args([
             service('validator'),
         ])
-        ->tag('console.command')
-
-
-        ->set('console.command.workflow_dump', WorkflowDumpCommand::class)
         ->tag('console.command')
 
         ->set('console.command.xliff_lint', XliffLintCommand::class)

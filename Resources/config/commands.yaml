@@ -44,6 +44,14 @@ services:
     tags:
       - { name: console.command, comand: config:dump-reference }
 
+  console_command.workflow_dump:
+    class: Prokl\CustomFrameworkExtensionsBundle\Command\Fork\WorkflowDumpCommand
+    calls:
+      - setContainer: ['@service_container']
+    arguments: [~]
+    tags:
+      - { name: console.command, comand: workflow:dump }
+
   ####################
   # Кастомные команды
   ####################
