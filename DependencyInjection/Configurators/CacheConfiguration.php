@@ -4,8 +4,10 @@ namespace Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurator
 
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\Cache\Adapter\AdapterInterface;
+use Symfony\Component\Cache\Adapter\ApcuAdapter;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\ChainAdapter;
+use Symfony\Component\Cache\Adapter\MemcachedAdapter;
 use Symfony\Component\Cache\Adapter\TagAwareAdapter;
 use Symfony\Component\Cache\DependencyInjection\CachePoolPass;
 use Symfony\Component\Cache\Marshaller\DefaultMarshaller;
@@ -47,7 +49,18 @@ class CacheConfiguration
         }
         $version = new Parameter('container.build_id');
 
-        $container->getDefinition('cache.adapter.apcu')->replaceArgument(2, $version);
+        if (!ApcuAdapter::isSupported()) {
+            $container->removeDefinition('cache.adapter.apcu');
+        }
+
+        if (!MemcachedAdapter::isSupported()) {
+            $container->removeDefinition('cache.adapter.memcached');
+        }
+
+        if ($container->hasDefinition('cache.adapter.apcu')) {
+            $container->getDefinition('cache.adapter.apcu')->replaceArgument(2, $version);
+        }
+
         $container->getDefinition('cache.adapter.system')->replaceArgument(2, $version);
         $container->getDefinition('cache.adapter.filesystem')->replaceArgument(2, $config['directory']);
 

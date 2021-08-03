@@ -24,29 +24,6 @@ services:
     tags:
       - { name: cache.pool }
 
-  cache.adapter.memcached:
-    class: Symfony\Component\Cache\Adapter\MemcachedAdapter
-    arguments: [~, ~,0, '@cache.default_marshaller']
-    tags:
-      - { name: cache.pool, provider: "cache.default_memcached_provider", clearer: cache.app_clearer, reset: reset }
-      - { name: monolog.logger, channel: cache }
-
-  cache.adapter.redis:
-    class: Symfony\Component\Cache\Adapter\RedisAdapter
-    arguments: [~, ~,0, '@cache.default_marshaller']
-    calls:
-      - setLogger: ['@logger']
-    tags:
-      - { name: cache.pool, provider: "cache.default_redis_provider", clearer: cache.default_clearer, reset: reset }
-      - { name: monolog.logger, channel: cache }
-
-  cache.adapter.apcu:
-    class: Symfony\Component\Cache\Adapter\ApcuAdapter
-    arguments: ['', 0,~]
-    tags:
-      - { name: cache.pool, clearer: cache.default_clearer, reset: reset }
-      - { name: monolog.logger, channel: cache }
-
   cache.app:
     public: true
     autowire: true
