@@ -20,6 +20,7 @@ use Symfony\Bridge\Monolog\Processor\DebugProcessor;
 use Symfony\Bridge\Twig\Extension\CsrfExtension;
 use Symfony\Bundle\FrameworkBundle\Routing\RouteLoaderInterface;
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\Config\Resource\FileExistenceResource;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\DependencyInjection\Alias;
 use Symfony\Component\DependencyInjection\Argument\ServiceClosureArgument;
@@ -109,6 +110,9 @@ use Symfony\Contracts\Cache\CallbackInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\Service\ServiceSubscriberInterface;
+use Twig\Extension\ExtensionInterface;
+use Twig\Extension\RuntimeExtensionInterface;
+use Twig\Loader\LoaderInterface;
 
 /**
  * Class CustomFrameworkExtensionsExtension
@@ -204,15 +208,26 @@ class CustomFrameworkExtensionsExtension extends Extension
                 $twigPaths[] = $path;
             }
 
+            $defaultTwigPath = $container->getParameterBag()->resolveValue((string)$config['twig']['default_path']);
+            if (file_exists($defaultTwigPath)) {
+                $container->addResource(new FileExistenceResource($defaultTwigPath));
+            }
+
             $container->setParameter('twig_paths', $twigPaths);
             $container->setParameter('twig_cache_dir', (string)$config['twig']['cache_dir']);
-            $container->setParameter('twig.default_path', (string)$config['twig']['default_path']);
+            $container->setParameter('twig.default_path', $defaultTwigPath);
             $container->setParameter('twig.autoescape', $config['twig']['autoescape']);
             $container->setParameter('twig.autoescape_service', $config['twig']['autoescape_service']);
             $container->setParameter('twig.autoescape_service_method', $config['twig']['autoescape_service_method']);
             $container->setParameter('twig.autoescape_base_template_class', $config['twig']['base_template_class']);
             $container->setParameter('twig.debug', $config['twig']['debug']);
             $container->setParameter('twig.strict_variables', $config['twig']['strict_variables']);
+
+            $container->registerForAutoconfiguration(\Twig_ExtensionInterface::class)->addTag('twig.extension');
+            $container->registerForAutoconfiguration(\Twig_LoaderInterface::class)->addTag('twig.loader');
+            $container->registerForAutoconfiguration(ExtensionInterface::class)->addTag('twig.extension');
+            $container->registerForAutoconfiguration(LoaderInterface::class)->addTag('twig.loader');
+            $container->registerForAutoconfiguration(RuntimeExtensionInterface::class)->addTag('twig.runtime');
         }
 
         if (!empty($config['cache']) && $config['cache']['enabled'] === true) {
