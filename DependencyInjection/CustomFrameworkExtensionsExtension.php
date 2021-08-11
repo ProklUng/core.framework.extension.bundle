@@ -206,7 +206,13 @@ class CustomFrameworkExtensionsExtension extends Extension
 
             $container->setParameter('twig_paths', $twigPaths);
             $container->setParameter('twig_cache_dir', (string)$config['twig']['cache_dir']);
-            $container->setParameter('twig_default_path', (string)$config['twig']['default_path option']);
+            $container->setParameter('twig_default_path', (string)$config['twig']['default_path']);
+            $container->setParameter('twig_autoescape', $config['twig']['autoescape']);
+            $container->setParameter('twig_autoescape_service', $config['twig']['autoescape_service']);
+            $container->setParameter('twig_autoescape_service_method', $config['twig']['autoescape_service_method']);
+            $container->setParameter('twig_autoescape_base_template_class', $config['twig']['base_template_class']);
+            $container->setParameter('twig_debug', $config['twig']['debug']);
+            $container->setParameter('twig_strict_variables', $config['twig']['strict_variables']);
         }
 
         if (!empty($config['cache']) && $config['cache']['enabled'] === true) {

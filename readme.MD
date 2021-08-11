@@ -50,11 +50,20 @@ framework:
       default_lifetime: 600
   twig:
     # Пути к шаблонам
+    default_path: '%kernel.project_dir%/local/twig'
     paths:
-      - '/local/twig/'
+      '%kernel.project_dir%/local/twig': ~
+      # С namespace
+      '%kernel.project_dir%/../../vendor/symfony/web-profiler-bundle/Resources/views': WebProfiler
 
     cache: false
     cache_dir: '/bitrix/cache/twig'
+    autoescape: 'name'
+    autoescape_service: ~
+    autoescape_service_method: ~
+    base_template_class: 'Twig\Template'
+    debug: '%kernel.debug%'
+    strict_variables: '%kernel.debug%'
 
   dbal:
     enabled: true
