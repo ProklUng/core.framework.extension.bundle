@@ -367,14 +367,51 @@ final class Configuration implements ConfigurationInterface
         $rootNode
             ->children()
             ->arrayNode('twig')
-            ->info('Twig configuration')
+            ->fixXmlConfig('path')
             ->children()
-            ->arrayNode('paths')
-            ->scalarPrototype()->end()
-            ->end()
-            ->booleanNode('cache')->defaultValue(false)->end()
+            ->variableNode('autoescape')->defaultValue('name')->end()
+            ->scalarNode('autoescape_service')->defaultNull()->end()
+            ->scalarNode('autoescape_service_method')->defaultNull()->end()
+            ->scalarNode('base_template_class')->example('Twig\Template')->cannotBeEmpty()->end()
+            ->scalarNode('cache')->defaultValue(false)->end()
             ->scalarNode('cache_dir')->defaultValue('')->end()
-            ->scalarNode('default_path option')->defaultValue('')->end()
+            ->scalarNode('charset')->defaultValue('%kernel.charset%')->end()
+            ->booleanNode('debug')->defaultValue('%kernel.debug%')->end()
+            ->booleanNode('strict_variables')->defaultValue('%kernel.debug%')->end()
+            ->scalarNode('auto_reload')->end()
+            ->integerNode('optimizations')->min(-1)->end()
+            ->scalarNode('default_path')
+            ->info('The default path used to load templates')
+            ->defaultValue('%kernel.project_dir%/local/twig')
+            ->end()
+            ->arrayNode('paths')
+            ->normalizeKeys(false)
+            ->useAttributeAsKey('paths')
+            ->beforeNormalization()
+            ->always()
+            ->then(function ($paths) {
+                $normalized = [];
+                foreach ($paths as $path => $namespace) {
+                    if (\is_array($namespace)) {
+                        // xml
+                        $path = $namespace['value'];
+                        $namespace = $namespace['namespace'];
+                    }
+
+                    // path within the default namespace
+                    if (ctype_digit((string) $path)) {
+                        $path = $namespace;
+                        $namespace = null;
+                    }
+
+                    $normalized[$path] = $namespace;
+                }
+
+                return $normalized;
+            })
+            ->end()
+            ->prototype('variable')->end()
+            ->end()
             ->end()
             ->end()
             ->end()

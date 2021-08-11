@@ -21,7 +21,10 @@ class ConfigDependencyPass implements CompilerPassInterface
         }
 
         // Если нет Твига, то поудалять кастомные почтовые сервисы.
-        if (!$container->hasDefinition('twig.instance')) {
+        if (!$container->hasDefinition('twig.instance')
+            &&
+            !$container->hasDefinition('twig')
+        ) {
             $services = [
                 'custom_mail_service',
                 'Prokl\CustomFrameworkExtensionsBundle\Services\Mailer\EmailService',
