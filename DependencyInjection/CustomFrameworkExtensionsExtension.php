@@ -176,6 +176,7 @@ class CustomFrameworkExtensionsExtension extends Extension
         $loader->load('stuff.yaml');
         $loader->load('filesystem.yaml');
         $loader->load('attributes.yaml');
+        $loaderPhp->load('error_renderer.php');
 
         if (!empty($config['twig'])) {
             $container->setParameter('twig_config', $config['twig']);
