@@ -222,12 +222,6 @@ class CustomFrameworkExtensionsExtension extends Extension
             $container->setParameter('twig.autoescape_base_template_class', $config['twig']['base_template_class']);
             $container->setParameter('twig.debug', $config['twig']['debug']);
             $container->setParameter('twig.strict_variables', $config['twig']['strict_variables']);
-
-            $container->registerForAutoconfiguration(\Twig_ExtensionInterface::class)->addTag('twig.extension');
-            $container->registerForAutoconfiguration(\Twig_LoaderInterface::class)->addTag('twig.loader');
-            $container->registerForAutoconfiguration(ExtensionInterface::class)->addTag('twig.extension');
-            $container->registerForAutoconfiguration(LoaderInterface::class)->addTag('twig.loader');
-            $container->registerForAutoconfiguration(RuntimeExtensionInterface::class)->addTag('twig.runtime');
         }
 
         if (!empty($config['cache']) && $config['cache']['enabled'] === true) {
