@@ -8,9 +8,12 @@ use Doctrine\Common\Cache\Cache;
 use Doctrine\DBAL\Connection;
 use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\DbalConfiguration;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
+use Symfony\Component\Config\Definition\Builder\NodeBuilder;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
+use Symfony\Component\DependencyInjection\Exception\LogicException;
+use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\Lock\Lock;
 use Symfony\Component\Lock\Store\SemaphoreStore;
@@ -51,7 +54,7 @@ final class Configuration implements ConfigurationInterface
             $parentPackages = (array) $parentPackage;
             $parentPackages[] = 'symfony/framework-bundle';
 
-            return static::willBeAvailable($package, $class, $parentPackages);
+            return Configuration::willBeAvailable($package, $class, $parentPackages);
         };
 
         $enableIfStandalone = static function (string $package, string $class) use ($willBeAvailable) {
@@ -74,7 +77,11 @@ final class Configuration implements ConfigurationInterface
         $this->addMessengerSection($rootNode);
         $this->addNotifierSection($rootNode, $enableIfStandalone);
         $this->addLockSection($rootNode, $enableIfStandalone);
+        $this->addHttpCacheSection($rootNode);
+        $this->addProfilerSection($rootNode);
         $this->addPhpErrorsSection($rootNode);
+        $this->addRequestSection($rootNode);
+        $this->addHttpClientSection($rootNode);
 
         $dbalConfig = new DbalConfiguration();
         $dbalConfig->addDbalSection($rootNode);
@@ -830,5 +837,414 @@ final class Configuration implements ConfigurationInterface
             ->end()
             ->end()
         ;
+    }
+
+    private function addProfilerSection(ArrayNodeDefinition $rootNode)
+    {
+        $rootNode
+            ->children()
+            ->arrayNode('profiler')
+            ->info('profiler configuration')
+            ->canBeEnabled()
+            ->children()
+            ->booleanNode('collect')->defaultTrue()->end()
+            ->booleanNode('only_exceptions')->defaultFalse()->end()
+            ->booleanNode('only_master_requests')->defaultFalse()->end()
+            ->scalarNode('dsn')->defaultValue('file:%kernel.cache_dir%/profiler')->end()
+            ->end()
+            ->end()
+            ->end()
+        ;
+    }
+
+    private function addHttpCacheSection(ArrayNodeDefinition $rootNode)
+    {
+        $rootNode
+            ->children()
+            ->arrayNode('http_cache')
+            ->info('HTTP cache configuration')
+            ->canBeEnabled()
+            ->fixXmlConfig('private_header')
+            ->children()
+            ->booleanNode('debug')->defaultValue('%kernel.debug%')->end()
+            ->enumNode('trace_level')
+            ->values(['none', 'short', 'full'])
+            ->end()
+            ->scalarNode('trace_header')->end()
+            ->integerNode('default_ttl')->end()
+            ->arrayNode('private_headers')
+            ->performNoDeepMerging()
+            ->scalarPrototype()->end()
+            ->end()
+            ->booleanNode('allow_reload')->end()
+            ->booleanNode('allow_revalidate')->end()
+            ->integerNode('stale_while_revalidate')->end()
+            ->integerNode('stale_if_error')->end()
+            ->end()
+            ->end()
+            ->end()
+        ;
+    }
+
+    private function addRequestSection(ArrayNodeDefinition $rootNode)
+    {
+        $rootNode
+            ->children()
+            ->arrayNode('request')
+            ->info('request configuration')
+            ->canBeEnabled()
+            ->fixXmlConfig('format')
+            ->children()
+            ->arrayNode('formats')
+            ->useAttributeAsKey('name')
+            ->prototype('array')
+            ->beforeNormalization()
+            ->ifTrue(function ($v) { return \is_array($v) && isset($v['mime_type']); })
+            ->then(function ($v) { return $v['mime_type']; })
+            ->end()
+            ->beforeNormalization()->castToArray()->end()
+            ->prototype('scalar')->end()
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+        ;
+    }
+
+    private function addHttpClientSection(ArrayNodeDefinition $rootNode)
+    {
+        $rootNode
+            ->children()
+            ->arrayNode('http_client')
+            ->info('HTTP Client configuration')
+            ->{!class_exists(FullStack::class) && class_exists(HttpClient::class) ? 'canBeDisabled' : 'canBeEnabled'}()
+            ->fixXmlConfig('scoped_client')
+            ->beforeNormalization()
+            ->always(function ($config) {
+                if (empty($config['scoped_clients']) || !\is_array($config['default_options']['retry_failed'] ?? null)) {
+                    return $config;
+                }
+
+                foreach ($config['scoped_clients'] as &$scopedConfig) {
+                    if (!isset($scopedConfig['retry_failed']) || true === $scopedConfig['retry_failed']) {
+                        $scopedConfig['retry_failed'] = $config['default_options']['retry_failed'];
+                        continue;
+                    }
+                    if (\is_array($scopedConfig['retry_failed'])) {
+                        $scopedConfig['retry_failed'] = $scopedConfig['retry_failed'] + $config['default_options']['retry_failed'];
+                    }
+                }
+
+                return $config;
+            })
+            ->end()
+            ->children()
+            ->integerNode('max_host_connections')
+            ->info('The maximum number of connections to a single host.')
+            ->end()
+            ->arrayNode('default_options')
+            ->fixXmlConfig('header')
+            ->children()
+            ->arrayNode('headers')
+            ->info('Associative array: header => value(s).')
+            ->useAttributeAsKey('name')
+            ->normalizeKeys(false)
+            ->variablePrototype()->end()
+            ->end()
+            ->integerNode('max_redirects')
+            ->info('The maximum number of redirects to follow.')
+            ->end()
+            ->scalarNode('http_version')
+            ->info('The default HTTP version, typically 1.1 or 2.0, leave to null for the best version.')
+            ->end()
+            ->arrayNode('resolve')
+            ->info('Associative array: domain => IP.')
+            ->useAttributeAsKey('host')
+            ->beforeNormalization()
+            ->always(function ($config) {
+                if (!\is_array($config)) {
+                    return [];
+                }
+                if (!isset($config['host'], $config['value']) || \count($config) > 2) {
+                    return $config;
+                }
+
+                return [$config['host'] => $config['value']];
+            })
+            ->end()
+            ->normalizeKeys(false)
+            ->scalarPrototype()->end()
+            ->end()
+            ->scalarNode('proxy')
+            ->info('The URL of the proxy to pass requests through or null for automatic detection.')
+            ->end()
+            ->scalarNode('no_proxy')
+            ->info('A comma separated list of hosts that do not require a proxy to be reached.')
+            ->end()
+            ->floatNode('timeout')
+            ->info('The idle timeout, defaults to the "default_socket_timeout" ini parameter.')
+            ->end()
+            ->floatNode('max_duration')
+            ->info('The maximum execution time for the request+response as a whole.')
+            ->end()
+            ->scalarNode('bindto')
+            ->info('A network interface name, IP address, a host name or a UNIX socket to bind to.')
+            ->end()
+            ->booleanNode('verify_peer')
+            ->info('Indicates if the peer should be verified in an SSL/TLS context.')
+            ->end()
+            ->booleanNode('verify_host')
+            ->info('Indicates if the host should exist as a certificate common name.')
+            ->end()
+            ->scalarNode('cafile')
+            ->info('A certificate authority file.')
+            ->end()
+            ->scalarNode('capath')
+            ->info('A directory that contains multiple certificate authority files.')
+            ->end()
+            ->scalarNode('local_cert')
+            ->info('A PEM formatted certificate file.')
+            ->end()
+            ->scalarNode('local_pk')
+            ->info('A private key file.')
+            ->end()
+            ->scalarNode('passphrase')
+            ->info('The passphrase used to encrypt the "local_pk" file.')
+            ->end()
+            ->scalarNode('ciphers')
+            ->info('A list of SSL/TLS ciphers separated by colons, commas or spaces (e.g. "RC3-SHA:TLS13-AES-128-GCM-SHA256"...)')
+            ->end()
+            ->arrayNode('peer_fingerprint')
+            ->info('Associative array: hashing algorithm => hash(es).')
+            ->normalizeKeys(false)
+            ->children()
+            ->variableNode('sha1')->end()
+            ->variableNode('pin-sha256')->end()
+            ->variableNode('md5')->end()
+            ->end()
+            ->end()
+            ->append($this->addHttpClientRetrySection())
+            ->end()
+            ->end()
+            ->scalarNode('mock_response_factory')
+            ->info('The id of the service that should generate mock responses. It should be either an invokable or an iterable.')
+            ->end()
+            ->arrayNode('scoped_clients')
+            ->useAttributeAsKey('name')
+            ->normalizeKeys(false)
+            ->arrayPrototype()
+            ->fixXmlConfig('header')
+            ->beforeNormalization()
+            ->always()
+            ->then(function ($config) {
+                if (!class_exists(HttpClient::class)) {
+                    throw new LogicException('HttpClient support cannot be enabled as the component is not installed. Try running "composer require symfony/http-client".');
+                }
+
+                return \is_array($config) ? $config : ['base_uri' => $config];
+            })
+            ->end()
+            ->validate()
+            ->ifTrue(function ($v) { return !isset($v['scope']) && !isset($v['base_uri']); })
+            ->thenInvalid('Either "scope" or "base_uri" should be defined.')
+            ->end()
+            ->validate()
+            ->ifTrue(function ($v) { return !empty($v['query']) && !isset($v['base_uri']); })
+            ->thenInvalid('"query" applies to "base_uri" but no base URI is defined.')
+            ->end()
+            ->children()
+            ->scalarNode('scope')
+            ->info('The regular expression that the request URL must match before adding the other options. When none is provided, the base URI is used instead.')
+            ->cannotBeEmpty()
+            ->end()
+            ->scalarNode('base_uri')
+            ->info('The URI to resolve relative URLs, following rules in RFC 3985, section 2.')
+            ->cannotBeEmpty()
+            ->end()
+            ->scalarNode('auth_basic')
+            ->info('An HTTP Basic authentication "username:password".')
+            ->end()
+            ->scalarNode('auth_bearer')
+            ->info('A token enabling HTTP Bearer authorization.')
+            ->end()
+            ->scalarNode('auth_ntlm')
+            ->info('A "username:password" pair to use Microsoft NTLM authentication (requires the cURL extension).')
+            ->end()
+            ->arrayNode('query')
+            ->info('Associative array of query string values merged with the base URI.')
+            ->useAttributeAsKey('key')
+            ->beforeNormalization()
+            ->always(function ($config) {
+                if (!\is_array($config)) {
+                    return [];
+                }
+                if (!isset($config['key'], $config['value']) || \count($config) > 2) {
+                    return $config;
+                }
+
+                return [$config['key'] => $config['value']];
+            })
+            ->end()
+            ->normalizeKeys(false)
+            ->scalarPrototype()->end()
+            ->end()
+            ->arrayNode('headers')
+            ->info('Associative array: header => value(s).')
+            ->useAttributeAsKey('name')
+            ->normalizeKeys(false)
+            ->variablePrototype()->end()
+            ->end()
+            ->integerNode('max_redirects')
+            ->info('The maximum number of redirects to follow.')
+            ->end()
+            ->scalarNode('http_version')
+            ->info('The default HTTP version, typically 1.1 or 2.0, leave to null for the best version.')
+            ->end()
+            ->arrayNode('resolve')
+            ->info('Associative array: domain => IP.')
+            ->useAttributeAsKey('host')
+            ->beforeNormalization()
+            ->always(function ($config) {
+                if (!\is_array($config)) {
+                    return [];
+                }
+                if (!isset($config['host'], $config['value']) || \count($config) > 2) {
+                    return $config;
+                }
+
+                return [$config['host'] => $config['value']];
+            })
+            ->end()
+            ->normalizeKeys(false)
+            ->scalarPrototype()->end()
+            ->end()
+            ->scalarNode('proxy')
+            ->info('The URL of the proxy to pass requests through or null for automatic detection.')
+            ->end()
+            ->scalarNode('no_proxy')
+            ->info('A comma separated list of hosts that do not require a proxy to be reached.')
+            ->end()
+            ->floatNode('timeout')
+            ->info('The idle timeout, defaults to the "default_socket_timeout" ini parameter.')
+            ->end()
+            ->floatNode('max_duration')
+            ->info('The maximum execution time for the request+response as a whole.')
+            ->end()
+            ->scalarNode('bindto')
+            ->info('A network interface name, IP address, a host name or a UNIX socket to bind to.')
+            ->end()
+            ->booleanNode('verify_peer')
+            ->info('Indicates if the peer should be verified in an SSL/TLS context.')
+            ->end()
+            ->booleanNode('verify_host')
+            ->info('Indicates if the host should exist as a certificate common name.')
+            ->end()
+            ->scalarNode('cafile')
+            ->info('A certificate authority file.')
+            ->end()
+            ->scalarNode('capath')
+            ->info('A directory that contains multiple certificate authority files.')
+            ->end()
+            ->scalarNode('local_cert')
+            ->info('A PEM formatted certificate file.')
+            ->end()
+            ->scalarNode('local_pk')
+            ->info('A private key file.')
+            ->end()
+            ->scalarNode('passphrase')
+            ->info('The passphrase used to encrypt the "local_pk" file.')
+            ->end()
+            ->scalarNode('ciphers')
+            ->info('A list of SSL/TLS ciphers separated by colons, commas or spaces (e.g. "RC3-SHA:TLS13-AES-128-GCM-SHA256"...)')
+            ->end()
+            ->arrayNode('peer_fingerprint')
+            ->info('Associative array: hashing algorithm => hash(es).')
+            ->normalizeKeys(false)
+            ->children()
+            ->variableNode('sha1')->end()
+            ->variableNode('pin-sha256')->end()
+            ->variableNode('md5')->end()
+            ->end()
+            ->end()
+            ->append($this->addHttpClientRetrySection())
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+        ;
+    }
+
+    private function addHttpClientRetrySection()
+    {
+        $root = new NodeBuilder();
+
+        return $root
+            ->arrayNode('retry_failed')
+            ->fixXmlConfig('http_code')
+            ->canBeEnabled()
+            ->addDefaultsIfNotSet()
+            ->beforeNormalization()
+            ->always(function ($v) {
+                if (isset($v['retry_strategy']) && (isset($v['http_codes']) || isset($v['delay']) || isset($v['multiplier']) || isset($v['max_delay']) || isset($v['jitter']))) {
+                    throw new \InvalidArgumentException('The "retry_strategy" option cannot be used along with the "http_codes", "delay", "multiplier", "max_delay" or "jitter" options.');
+                }
+
+                return $v;
+            })
+            ->end()
+            ->children()
+            ->scalarNode('retry_strategy')->defaultNull()->info('service id to override the retry strategy')->end()
+            ->arrayNode('http_codes')
+            ->performNoDeepMerging()
+            ->beforeNormalization()
+            ->ifArray()
+            ->then(static function ($v) {
+                $list = [];
+                foreach ($v as $key => $val) {
+                    if (is_numeric($val)) {
+                        $list[] = ['code' => $val];
+                    } elseif (\is_array($val)) {
+                        if (isset($val['code']) || isset($val['methods'])) {
+                            $list[] = $val;
+                        } else {
+                            $list[] = ['code' => $key, 'methods' => $val];
+                        }
+                    } elseif (true === $val || null === $val) {
+                        $list[] = ['code' => $key];
+                    }
+                }
+
+                return $list;
+            })
+            ->end()
+            ->useAttributeAsKey('code')
+            ->arrayPrototype()
+            ->fixXmlConfig('method')
+            ->children()
+            ->integerNode('code')->end()
+            ->arrayNode('methods')
+            ->beforeNormalization()
+            ->ifArray()
+            ->then(function ($v) {
+                return array_map('strtoupper', $v);
+            })
+            ->end()
+            ->prototype('scalar')->end()
+            ->info('A list of HTTP methods that triggers a retry for this status code. When empty, all methods are retried')
+            ->end()
+            ->end()
+            ->end()
+            ->info('A list of HTTP status code that triggers a retry')
+            ->end()
+            ->integerNode('max_retries')->defaultValue(3)->min(0)->end()
+            ->integerNode('delay')->defaultValue(1000)->min(0)->info('Time in ms to delay (or the initial value when multiplier is used)')->end()
+            ->floatNode('multiplier')->defaultValue(2)->min(1)->info('If greater than 1, delay will grow exponentially for each retry: delay * (multiple ^ retries)')->end()
+            ->integerNode('max_delay')->defaultValue(0)->min(0)->info('Max time in ms that a retry should ever be delayed (0 = infinite)')->end()
+            ->floatNode('jitter')->defaultValue(0.1)->min(0)->max(1)->info('Randomness in percent (between 0 and 1) to apply to the delay')->end()
+            ->end()
+            ;
     }
 }

@@ -6,11 +6,13 @@ use Composer\InstalledVersions;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\Common\Annotations\Reader;
 use Exception;
+use Http\Client\HttpClient;
 use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\CacheConfiguration;
 use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\PropertyInfoConfigurator;
 use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\SecretConfigurator;
 use Prokl\CustomFrameworkExtensionsBundle\DependencyInjection\Configurators\SerializerConfigurator;
 use Prokl\CustomFrameworkExtensionsBundle\Extra\DoctrineDbalExtension;
+use Psr\Http\Client\ClientInterface;
 use Psr\Log\LoggerAwareInterface;
 use RuntimeException;
 use Spiral\Attributes\ReaderInterface;
@@ -28,10 +30,15 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\EnvVarLoaderInterface;
 use Symfony\Component\DependencyInjection\EnvVarProcessorInterface;
+use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\LogicException;
 use Symfony\Component\DependencyInjection\Loader\PhpFileLoader;
 use Symfony\Component\DependencyInjection\Loader\YamlFileLoader;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Retry\GenericRetryStrategy;
+use Symfony\Component\HttpClient\RetryableHttpClient;
+use Symfony\Component\HttpClient\ScopingHttpClient;
 use Symfony\Component\HttpKernel\CacheClearer\CacheClearerInterface;
 use Symfony\Component\HttpKernel\CacheWarmer\CacheWarmerInterface;
 use Symfony\Component\HttpKernel\DataCollector\DataCollectorInterface;
@@ -100,6 +107,7 @@ use Symfony\Component\Notifier\Notifier;
 use Symfony\Component\Notifier\Recipient\Recipient;
 use Symfony\Contracts\Cache\CallbackInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\Service\ServiceSubscriberInterface;
 
 /**
@@ -136,6 +144,16 @@ class CustomFrameworkExtensionsExtension extends Extension
      * @var boolean $messengerConfigEnabled
      */
     private $messengerConfigEnabled = false;
+
+    /**
+     * @var boolean $httpClientConfigEnabled
+     */
+    private $httpClientConfigEnabled = false;
+
+    /**
+     * @var boolean $notifierConfigEnabled
+     */
+    private $notifierConfigEnabled = false;
 
     /**
      * @inheritDoc
@@ -275,6 +293,10 @@ class CustomFrameworkExtensionsExtension extends Extension
             $loader->load('mailer_custom.yaml');
 
             $this->registerMailerConfiguration($config['mailer'], $container);
+        }
+
+        if ($this->httpClientConfigEnabled = $this->isConfigEnabled($container, $config['http_client'])) {
+            $this->registerHttpClientConfiguration($config['http_client'], $container, $loaderPhp, $config['profiler']);
         }
 
         if (!empty($config['messenger']) && $config['messenger']['enabled'] === true) {
@@ -1008,6 +1030,8 @@ class CustomFrameworkExtensionsExtension extends Extension
                 $notifier->addMethodCall('addAdminRecipient', [new Reference($id)]);
             }
         }
+
+        $this->notifierConfigEnabled = true;
     }
 
     private function registerLockConfiguration(array $config, ContainerBuilder $container)
@@ -1146,5 +1170,161 @@ class CustomFrameworkExtensionsExtension extends Extension
             $definition->addArgument(new Reference('request_stack'));
             $container->setDefinition('debug.log_processor', $definition);
         }
+    }
+
+    private function registerProfilerConfiguration(array $config, ContainerBuilder $container, PhpFileLoader $loader)
+    {
+        if (!$this->isConfigEnabled($container, $config)) {
+            // this is needed for the WebProfiler to work even if the profiler is disabled
+            $container->setParameter('data_collector.templates', []);
+
+            return;
+        }
+
+        $loader->load('profiling.php');
+        $loader->load('collectors.php');
+        $loader->load('cache_debug.php');
+
+        if ($this->validatorConfigEnabled) {
+            $loader->load('validator_debug.php');
+        }
+
+        if ($this->messengerConfigEnabled) {
+            $loader->load('messenger_debug.php');
+        }
+
+        if ($this->mailerConfigEnabled) {
+            $loader->load('mailer_debug.php');
+        }
+
+//        if ($this->httpClientConfigEnabled) {
+//            $loader->load('http_client_debug.php');
+//        }
+//
+//        if ($this->notifierConfigEnabled) {
+//            $loader->load('notifier_debug.php');
+//        }
+
+        $container->setParameter('profiler_listener.only_exceptions', $config['only_exceptions']);
+        $container->setParameter('profiler_listener.only_master_requests', $config['only_master_requests']);
+
+        // Choose storage class based on the DSN
+        [$class] = explode(':', $config['dsn'], 2);
+        if ('file' !== $class) {
+            throw new \LogicException(sprintf('Driver "%s" is not supported for the profiler.', $class));
+        }
+
+        $container->setParameter('profiler.storage.dsn', $config['dsn']);
+
+        $container->getDefinition('profiler')
+            ->addArgument($config['collect'])
+            ->addTag('kernel.reset', ['method' => 'reset']);
+    }
+
+    private function registerHttpClientConfiguration(array $config, ContainerBuilder $container, PhpFileLoader $loader, array $profilerConfig)
+    {
+        $loader->load('http_client.php');
+
+        $options = $config['default_options'] ?? [];
+        $retryOptions = $options['retry_failed'] ?? ['enabled' => false];
+        unset($options['retry_failed']);
+        $container->getDefinition('http_client')->setArguments([$options, $config['max_host_connections'] ?? 6]);
+
+        if (!$hasPsr18 = interface_exists(ClientInterface::class)) {
+            $container->removeDefinition('psr18.http_client');
+            $container->removeAlias(ClientInterface::class);
+        }
+
+        if (!interface_exists(HttpClient::class)) {
+            $container->removeDefinition(HttpClient::class);
+        }
+
+        if ($this->isConfigEnabled($container, $retryOptions)) {
+            $this->registerRetryableHttpClient($retryOptions, 'http_client', $container);
+        }
+
+        $httpClientId = ($retryOptions['enabled'] ?? false) ? 'http_client.retryable.inner' : ($this->isConfigEnabled($container, $profilerConfig) ? '.debug.http_client.inner' : 'http_client');
+        foreach ($config['scoped_clients'] as $name => $scopeConfig) {
+            if ('http_client' === $name) {
+                throw new InvalidArgumentException(sprintf('Invalid scope name: "%s" is reserved.', $name));
+            }
+
+            $scope = $scopeConfig['scope'] ?? null;
+            unset($scopeConfig['scope']);
+            $retryOptions = $scopeConfig['retry_failed'] ?? ['enabled' => false];
+            unset($scopeConfig['retry_failed']);
+
+            if (null === $scope) {
+                $baseUri = $scopeConfig['base_uri'];
+                unset($scopeConfig['base_uri']);
+
+                $container->register($name, ScopingHttpClient::class)
+                    ->setFactory([ScopingHttpClient::class, 'forBaseUri'])
+                    ->setArguments([new Reference($httpClientId), $baseUri, $scopeConfig])
+                    ->addTag('http_client.client')
+                ;
+            } else {
+                $container->register($name, ScopingHttpClient::class)
+                    ->setArguments([new Reference($httpClientId), [$scope => $scopeConfig], $scope])
+                    ->addTag('http_client.client')
+                ;
+            }
+
+            if ($this->isConfigEnabled($container, $retryOptions)) {
+                $this->registerRetryableHttpClient($retryOptions, $name, $container);
+            }
+
+            $container->registerAliasForArgument($name, HttpClientInterface::class);
+
+            if ($hasPsr18) {
+                $container->setDefinition('psr18.'.$name, new ChildDefinition('psr18.http_client'))
+                    ->replaceArgument(0, new Reference($name));
+
+                $container->registerAliasForArgument('psr18.'.$name, ClientInterface::class, $name);
+            }
+        }
+
+        if ($responseFactoryId = $config['mock_response_factory'] ?? null) {
+            $container->register($httpClientId.'.mock_client', MockHttpClient::class)
+                ->setDecoratedService($httpClientId, null, -10) // lower priority than TraceableHttpClient
+                ->setArguments([new Reference($responseFactoryId)]);
+        }
+    }
+
+    private function registerRetryableHttpClient(array $options, string $name, ContainerBuilder $container)
+    {
+        if (!class_exists(RetryableHttpClient::class)) {
+            throw new LogicException('Support for retrying failed requests requires symfony/http-client 5.2 or higher, try upgrading.');
+        }
+
+        if (null !== $options['retry_strategy']) {
+            $retryStrategy = new Reference($options['retry_strategy']);
+        } else {
+            $retryStrategy = new ChildDefinition('http_client.abstract_retry_strategy');
+            $codes = [];
+            foreach ($options['http_codes'] as $code => $codeOptions) {
+                if ($codeOptions['methods']) {
+                    $codes[$code] = $codeOptions['methods'];
+                } else {
+                    $codes[] = $code;
+                }
+            }
+
+            $retryStrategy
+                ->replaceArgument(0, $codes ?: GenericRetryStrategy::DEFAULT_RETRY_STATUS_CODES)
+                ->replaceArgument(1, $options['delay'])
+                ->replaceArgument(2, $options['multiplier'])
+                ->replaceArgument(3, $options['max_delay'])
+                ->replaceArgument(4, $options['jitter']);
+            $container->setDefinition($name.'.retry_strategy', $retryStrategy);
+
+            $retryStrategy = new Reference($name.'.retry_strategy');
+        }
+
+        $container
+            ->register($name.'.retryable', RetryableHttpClient::class)
+            ->setDecoratedService($name, null, 10) // higher priority than TraceableHttpClient
+            ->setArguments([new Reference($name.'.retryable.inner'), $retryStrategy, $options['max_retries'], new Reference('logger')])
+            ->addTag('monolog.logger', ['channel' => 'http_client']);
     }
 }
