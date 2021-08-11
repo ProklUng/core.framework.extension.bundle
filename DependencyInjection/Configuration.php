@@ -27,6 +27,19 @@ use Symfony\Component\Serializer\Serializer;
 final class Configuration implements ConfigurationInterface
 {
     /**
+     * @var boolean $debug
+     */
+    private $debug;
+
+    /**
+     * @param bool $debug Whether debugging is enabled or not.
+     */
+    public function __construct(bool $debug)
+    {
+        $this->debug = $debug;
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function getConfigTreeBuilder() : TreeBuilder
@@ -61,6 +74,7 @@ final class Configuration implements ConfigurationInterface
         $this->addMessengerSection($rootNode);
         $this->addNotifierSection($rootNode, $enableIfStandalone);
         $this->addLockSection($rootNode, $enableIfStandalone);
+        $this->addPhpErrorsSection($rootNode);
 
         $dbalConfig = new DbalConfiguration();
         $dbalConfig->addDbalSection($rootNode);
@@ -782,6 +796,35 @@ final class Configuration implements ConfigurationInterface
             ->beforeNormalization()->ifString()->then(function ($v) { return [$v]; })->end()
             ->prototype('scalar')->end()
             ->end()
+            ->end()
+            ->end()
+            ->end()
+            ->end()
+        ;
+    }
+
+    private function addPhpErrorsSection(ArrayNodeDefinition $rootNode)
+    {
+        $rootNode
+            ->children()
+            ->arrayNode('php_errors')
+            ->info('PHP errors handling configuration')
+            ->addDefaultsIfNotSet()
+            ->children()
+            ->scalarNode('log')
+            ->info('Use the application logger instead of the PHP logger for logging PHP errors.')
+            ->example('"true" to use the default configuration: log all errors. "false" to disable. An integer bit field of E_* constants.')
+            ->defaultValue($this->debug)
+            ->treatNullLike($this->debug)
+            ->validate()
+            ->ifTrue(function ($v) { return !(\is_int($v) || \is_bool($v)); })
+            ->thenInvalid('The "php_errors.log" parameter should be either an integer or a boolean.')
+            ->end()
+            ->end()
+            ->booleanNode('throw')
+            ->info('Throw PHP errors as \ErrorException instances.')
+            ->defaultValue($this->debug)
+            ->treatNullLike($this->debug)
             ->end()
             ->end()
             ->end()

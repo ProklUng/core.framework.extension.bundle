@@ -49,6 +49,7 @@
     "symfony/notifier": "^5.0",
     "symfony/monolog-bridge": "^4.4 || ^5.0",
     "symfony/lock": "^4.4 || ^5.0",
+    "symfony/stopwatch": "^4.4|^5.0",
     "php-http/httplug": "^2.2",
     "doctrine/annotations": "^1.10",
     "doctrine/doctrine-bundle": "^2.1",

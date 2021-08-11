@@ -14,6 +14,7 @@ use Prokl\CustomFrameworkExtensionsBundle\Extra\DoctrineDbalExtension;
 use Psr\Log\LoggerAwareInterface;
 use RuntimeException;
 use Spiral\Attributes\ReaderInterface;
+use Symfony\Bridge\Monolog\Processor\DebugProcessor;
 use Symfony\Bridge\Twig\Extension\CsrfExtension;
 use Symfony\Bundle\FrameworkBundle\Routing\RouteLoaderInterface;
 use Symfony\Component\Config\FileLocator;
@@ -54,12 +55,7 @@ use Symfony\Component\PropertyInfo\PropertyInitializableExtractorInterface;
 use Symfony\Component\PropertyInfo\PropertyListExtractorInterface;
 use Symfony\Component\PropertyInfo\PropertyReadInfoExtractorInterface;
 use Symfony\Component\PropertyInfo\PropertyTypeExtractorInterface;
-use Symfony\Component\Serializer\Encoder\DecoderInterface;
-use Symfony\Component\Serializer\Encoder\EncoderInterface;
-use Symfony\Component\Serializer\Normalizer\DenormalizerInterface;
-use Symfony\Component\Serializer\Normalizer\NormalizerInterface;
-use Symfony\Component\Validator\ConstraintValidatorInterface;
-use Symfony\Component\Validator\ObjectInitializerInterface;
+use Symfony\Component\Stopwatch\Stopwatch;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Messenger\Handler\MessageHandlerInterface;
 use Symfony\Component\Messenger\MessageBus;
@@ -147,7 +143,10 @@ class CustomFrameworkExtensionsExtension extends Extension
      */
     public function load(array $configs, ContainerBuilder $container) : void
     {
-        $configuration = new Configuration();
+        $configuration = new Configuration(
+            (bool)$container->getParameter('kernel.debug')
+        );
+
         $config = $this->processConfiguration($configuration, $configs);
 
         // DBAL
@@ -333,6 +332,25 @@ class CustomFrameworkExtensionsExtension extends Extension
 
         $propertyInfo = new PropertyInfoConfigurator();
         $propertyInfo->register($container);
+
+        if (!$container->hasParameter('debug.file_link_format')) {
+            $links = [
+                'textmate' => 'txmt://open?url=file://%%f&line=%%l',
+                'macvim' => 'mvim://open?url=file://%%f&line=%%l',
+                'emacs' => 'emacs://open?url=file://%%f&line=%%l',
+                'sublime' => 'subl://open?url=file://%%f&line=%%l',
+                'phpstorm' => 'phpstorm://open?file=%%f&line=%%l',
+                'atom' => 'atom://core/open/file?filename=%%f&line=%%l',
+                'vscode' => 'vscode://file/%%f:%%l',
+            ];
+            $ide = $config['ide'];
+            // mark any env vars found in the ide setting as used
+            $container->resolveEnvPlaceholders($ide);
+
+            $container->setParameter('debug.file_link_format', str_replace('%', '%%', ini_get('xdebug.file_link_format') ?: get_cfg_var('xdebug.file_link_format')) ?: ($links[$ide] ?? $ide));
+        }
+
+        $this->registerDebugConfiguration($config['php_errors'], $container, $loaderPhp);
 
         $this->addAnnotatedClassesToCompile([
             '**\\Controller\\',
@@ -1086,5 +1104,46 @@ class CustomFrameworkExtensionsExtension extends Extension
         }
 
         return false;
+    }
+
+    private function registerDebugConfiguration(array $config, ContainerBuilder $container, PhpFileLoader $loader)
+    {
+        $loader->load('debug_prod.php');
+
+        if (class_exists(Stopwatch::class)) {
+            $container->register('debug.stopwatch', Stopwatch::class)
+                ->addArgument(true)
+                ->addTag('kernel.reset', ['method' => 'reset']);
+            $container->setAlias(Stopwatch::class, new Alias('debug.stopwatch', false));
+        }
+
+        $debug = $container->getParameter('kernel.debug');
+
+        if ($debug) {
+            $container->setParameter('debug.container.dump', '%kernel.build_dir%/%kernel.container_class%.xml');
+        }
+
+        if ($debug && class_exists(Stopwatch::class)) {
+            $loader->load('debug.php');
+        }
+
+        $definition = $container->findDefinition('debug.debug_handlers_listener');
+
+        if (false === $config['log']) {
+            $definition->replaceArgument(1, null);
+        } elseif (true !== $config['log']) {
+            $definition->replaceArgument(2, $config['log']);
+        }
+
+        if (!$config['throw']) {
+            $container->setParameter('debug.error_handler.throw_at', 0);
+        }
+
+        if ($debug && class_exists(DebugProcessor::class)) {
+            $definition = new Definition(DebugProcessor::class);
+            $definition->setPublic(false);
+            $definition->addArgument(new Reference('request_stack'));
+            $container->setDefinition('debug.log_processor', $definition);
+        }
     }
 }
