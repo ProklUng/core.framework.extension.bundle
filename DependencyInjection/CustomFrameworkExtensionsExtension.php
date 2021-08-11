@@ -299,6 +299,8 @@ class CustomFrameworkExtensionsExtension extends Extension
             $this->registerHttpClientConfiguration($config['http_client'], $container, $loaderPhp, $config['profiler']);
         }
 
+        $this->registerProfilerConfiguration($config['profiler'], $container, $loaderPhp);
+
         if (!empty($config['messenger']) && $config['messenger']['enabled'] === true) {
             if (!interface_exists(MessageBusInterface::class)) {
                 throw new LogicException('Messenger support cannot be enabled as the Messenger component is not installed. Try running "composer require symfony/messenger".');
