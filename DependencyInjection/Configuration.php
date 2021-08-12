@@ -72,6 +72,7 @@ final class Configuration implements ConfigurationInterface
         $this->addCsrfSection($rootNode);
         $this->addPropertyAccessSection($rootNode);
         $this->addPropertyInfoSection($rootNode);
+
         $this->addTwigSection($rootNode);
         $this->addMailerSection($rootNode);
         $this->addMessengerSection($rootNode);
@@ -356,7 +357,7 @@ final class Configuration implements ConfigurationInterface
     }
 
     /**
-     * Annotations.
+     * Twig.
      *
      * @param ArrayNodeDefinition $rootNode Node.
      *
@@ -384,6 +385,49 @@ final class Configuration implements ConfigurationInterface
             ->info('The default path used to load templates')
             ->defaultValue('%kernel.project_dir%/local/twig')
             ->end()
+
+            ->arrayNode('globals')
+            ->normalizeKeys(false)
+            ->useAttributeAsKey('key')
+            ->example(['foo' => '@bar', 'pi' => 3.14])
+            ->prototype('array')
+            ->normalizeKeys(false)
+            ->beforeNormalization()
+            ->ifTrue(function ($v) { return \is_string($v) && str_starts_with($v, '@'); })
+            ->then(function ($v) {
+                if (str_starts_with($v, '@@')) {
+                    return substr($v, 1);
+                }
+
+                return ['id' => substr($v, 1), 'type' => 'service'];
+            })
+            ->end()
+            ->beforeNormalization()
+            ->ifTrue(function ($v) {
+                if (\is_array($v)) {
+                    $keys = array_keys($v);
+                    sort($keys);
+
+                    return $keys !== ['id', 'type'] && $keys !== ['value'];
+                }
+
+                return true;
+            })
+            ->then(function ($v) { return ['value' => $v]; })
+            ->end()
+            ->children()
+            ->scalarNode('id')->end()
+            ->scalarNode('type')
+            ->validate()
+            ->ifNotInArray(['service'])
+            ->thenInvalid('The %s type is not supported')
+            ->end()
+            ->end()
+            ->variableNode('value')->end()
+            ->end()
+            ->end()
+            ->end()
+
             ->arrayNode('paths')
             ->normalizeKeys(false)
             ->useAttributeAsKey('paths')
