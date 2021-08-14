@@ -36,11 +36,11 @@
             <argument type="service" id="debug.stopwatch" on-invalid="null" />
         </service>
 
-        <service id="data_collector.doctrine" class="%doctrine.data_collector.class%" public="false">
-            <tag name="data_collector" template="@Doctrine/Collector/db.html.twig" id="db" priority="250" />
-            <argument type="service" id="doctrine" />
-            <argument>true</argument>
-        </service>
+<!--        <service id="data_collector.doctrine" class="%doctrine.data_collector.class%" public="false">-->
+<!--            <tag name="data_collector" template="@Doctrine/Collector/db.html.twig" id="db" priority="250" />-->
+<!--            <argument type="service" id="doctrine" />-->
+<!--            <argument>true</argument>-->
+<!--        </service>-->
 
         <service id="doctrine.dbal.connection_factory" class="%doctrine.dbal.connection_factory.class%">
             <argument>%doctrine.dbal.connection_factory.types%</argument>
