@@ -320,6 +320,16 @@ class CustomFrameworkExtensionsExtension extends Extension
             $this->registerHttpClientConfiguration($config['http_client'], $container, $loaderPhp, $config['profiler']);
         }
 
+        if (!empty($config['notifier']) && $config['notifier']['enabled'] === true) {
+            if (!class_exists(Notifier::class)) {
+                throw new LogicException('Notifier support cannot be enabled as the component is not installed. Try running "composer require symfony/notifier".');
+            }
+
+            $loaderPhp->load('notifier.php');
+            $loaderPhp->load('notifier_transports.php');
+            $this->registerNotifierConfiguration($config['notifier'], $container);
+        }
+
         $this->registerProfilerConfiguration($config['profiler'], $container, $loaderPhp);
 
         if (!empty($config['messenger']) && $config['messenger']['enabled'] === true) {
@@ -359,16 +369,6 @@ class CustomFrameworkExtensionsExtension extends Extension
                     $container->removeDefinition('messenger.transport.redis.factory');
                 }
             }
-        }
-
-        if (!empty($config['notifier']) && $config['notifier']['enabled'] === true) {
-            if (!class_exists(Notifier::class)) {
-                throw new LogicException('Notifier support cannot be enabled as the component is not installed. Try running "composer require symfony/notifier".');
-            }
-
-            $loaderPhp->load('notifier.php');
-            $loaderPhp->load('notifier_transports.php');
-            $this->registerNotifierConfiguration($config['notifier'], $container);
         }
 
         if (!empty($config['lock'])) {
@@ -1224,9 +1224,9 @@ class CustomFrameworkExtensionsExtension extends Extension
 //            $loader->load('http_client_debug.php');
 //        }
 //
-//        if ($this->notifierConfigEnabled) {
-//            $loader->load('notifier_debug.php');
-//        }
+        if ($this->notifierConfigEnabled) {
+            $loader->load('notifier_debug.php');
+        }
 
         $container->setParameter('profiler_listener.only_exceptions', $config['only_exceptions']);
         $container->setParameter('profiler_listener.only_master_requests', $config['only_master_requests']);
