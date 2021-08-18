@@ -330,8 +330,6 @@ class CustomFrameworkExtensionsExtension extends Extension
             $this->registerNotifierConfiguration($config['notifier'], $container);
         }
 
-        $this->registerProfilerConfiguration($config['profiler'], $container, $loaderPhp);
-
         if (!empty($config['messenger']) && $config['messenger']['enabled'] === true) {
             if (!interface_exists(MessageBusInterface::class)) {
                 throw new LogicException('Messenger support cannot be enabled as the Messenger component is not installed. Try running "composer require symfony/messenger".');
@@ -397,6 +395,7 @@ class CustomFrameworkExtensionsExtension extends Extension
         }
 
         $this->registerDebugConfiguration($config['php_errors'], $container, $loaderPhp);
+        $this->registerProfilerConfiguration($config['profiler'], $container, $loaderPhp);
 
         $this->addAnnotatedClassesToCompile([
             '**\\Controller\\',
@@ -955,6 +954,7 @@ class CustomFrameworkExtensionsExtension extends Extension
         }
 
         if ($this->messengerConfigEnabled) {
+
             if ($config['notification_on_failed_messages']) {
                 $container->getDefinition('notifier.failed_message_listener')->addTag('kernel.event_subscriber');
             }
@@ -1213,7 +1213,7 @@ class CustomFrameworkExtensionsExtension extends Extension
         }
 
         if ($this->messengerConfigEnabled) {
-            $loader->load('messenger_debug.php');
+
         }
 
         if ($this->mailerConfigEnabled) {
