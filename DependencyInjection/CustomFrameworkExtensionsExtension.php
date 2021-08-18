@@ -110,9 +110,6 @@ use Symfony\Contracts\Cache\CallbackInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\Service\ServiceSubscriberInterface;
-use Twig\Extension\ExtensionInterface;
-use Twig\Extension\RuntimeExtensionInterface;
-use Twig\Loader\LoaderInterface;
 
 /**
  * Class CustomFrameworkExtensionsExtension
@@ -1218,6 +1215,10 @@ class CustomFrameworkExtensionsExtension extends Extension
 
         if ($this->mailerConfigEnabled) {
             $loader->load('mailer_debug.php');
+        }
+
+        if ($this->messengerConfigEnabled) {
+            $loader->load('messenger_debug.php');
         }
 
 //        if ($this->httpClientConfigEnabled) {
