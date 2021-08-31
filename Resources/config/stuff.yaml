@@ -24,8 +24,14 @@ services:
     class: Symfony\Component\HttpClient\HttplugClient
     arguments: ['@http_client']
 
+  request_app:
+    class: Symfony\Component\HttpFoundation\Request
+    factory: ['Symfony\Component\HttpFoundation\Request', 'createFromGlobals']
+
   request_stack:
     class: Symfony\Component\HttpFoundation\RequestStack
+    calls:
+      - push: [ '@request_app' ]
 
   Symfony\Component\HttpFoundation\RequestStack: '@request_stack'
 
