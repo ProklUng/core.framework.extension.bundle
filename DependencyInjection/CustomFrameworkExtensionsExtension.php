@@ -679,9 +679,12 @@ class CustomFrameworkExtensionsExtension extends Extension
         if (!\count($config['transports']) && null === $config['dsn']) {
             $config['dsn'] = 'smtp://null';
         }
+
         $transports = $config['dsn'] ? ['main' => $config['dsn']] : $config['transports'];
         $container->getDefinition('mailer.transports')->setArgument(0, $transports);
         $container->getDefinition('mailer.default_transport')->setArgument(0, current($transports));
+
+        $container->setAlias('mailer.logger_message_listener', (new Alias('mailer.message_logger_listener'))->setDeprecated('symfony/framework-bundle', '5.2', 'The "%alias_id%" alias is deprecated, use "mailer.message_logger_listener" instead.'));
 
         $classToServices = [
             SesTransportFactory::class => 'mailer.transport_factory.amazon',
