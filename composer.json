@@ -67,7 +67,14 @@
     "league/html-to-markdown": "^5.0"
   },
   "require-dev": {
-    "proklung/phpunit-testing-tools": "^1.0",
+    "proklung/phpunit-testing-tools": "^1.5",
     "icanhazstring/composer-unused": "^0.7.5"
+  },
+  "config": {
+    "allow-plugins": {
+      "composer/package-versions-deprecated": true,
+      "phpstan/extension-installer": true,
+      "icanhazstring/composer-unused": true
+    }
   }
 }

@@ -9,6 +9,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Exception\CommandNotFoundException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
+use Bitrix\Main\ModuleManager;
 
 /**
  * Class ConsoleCommandConfigurator
@@ -17,6 +18,7 @@ use Symfony\Component\HttpKernel\Bundle\Bundle;
  * @since 10.12.2020
  * @since 20.12.2020 Рефакторинг. Форк нативного способа подключения команд.
  * @since 26.02.2021 Убрал array_merge в цикле.
+ * @since 12.01.2021 Подхватывание команд установленных битриксовых модулей.
  */
 class ConsoleCommandConfigurator
 {
@@ -127,6 +129,51 @@ class ConsoleCommandConfigurator
     }
 
     /**
+     * Регистрация команд битриксовых модулей.
+     *
+     * @return void
+     *
+     * @since 12.01.2021
+     *
+     * @internal Формат файла cli.php в папке модуля.
+     * return [
+     *      new SampleCommand(), // Должен наследоваться от \Symfony\Component\Console\Command\Command
+     *      container()->get('sample.command') // Из контейнера
+     * ]
+     */
+    private function registerModuleCommands() : void
+    {
+        // Проверка - в Битриксе мы или нет.
+        if (!class_exists(ModuleManager::class)) {
+            return;
+        }
+
+        $result = [];
+
+        $documentRoot = $this->container->getParameter('kernel.project_dir');
+
+        foreach (glob($documentRoot . '/local/modules/*/cli.php') as $path) {
+            $moduleName = $this->getModuleNameByPath($path);
+            if (ModuleManager::isModuleInstalled($moduleName)) {
+                $result = require_once $path;
+            }
+        }
+
+        foreach (glob($documentRoot . '/bitrix/modules/*/cli.php') as $path) {
+            $moduleName = $this->getModuleNameByPath($path);
+            if (ModuleManager::isModuleInstalled($moduleName)) {
+                $result  = require_once $path;
+            }
+        }
+
+        foreach ((array)$result as $item) {
+            if (is_subclass_of($item, Command::class)) {
+                $this->application->add($item);
+            }
+        }
+    }
+
+    /**
      * Регистрация команд.
      *
      * @return void
@@ -160,5 +207,31 @@ class ConsoleCommandConfigurator
                 }
             }
         }
+
+        $this->registerModuleCommands();
+    }
+
+    /**
+     * Название битриксового модуля по пути.
+     *
+     * @param string $path
+     *
+     * @return string
+     * @since 12.01.2021
+     */
+    private function getModuleNameByPath(string $path): string
+    {
+        $documentRoot = $this->container->getParameter('kernel.project_dir');
+
+        $path = str_replace(
+            [
+                $documentRoot . '/bitrix/modules/',
+                $documentRoot . '/local/modules/',
+            ],
+            '',
+            $path
+        );
+
+        return current(explode('/', $path));
     }
 }
