@@ -245,6 +245,9 @@ class CustomFrameworkExtensionsExtension extends Extension
             $this->registerSessionConfiguration($config['session'], $container);
             if (!empty($config['test'])) {
                 $container->getDefinition('test.session.listener')->setArgument(1, '%session.storage.options%');
+                // test listener will replace the existing session listener
+                // as we are aliasing to avoid duplicated registered events
+                $container->setAlias('session_listener', 'test.session.listener');
             }
         }
 
@@ -1008,23 +1011,11 @@ class CustomFrameworkExtensionsExtension extends Extension
         $parentPackages = ['symfony/framework-bundle', 'symfony/notifier'];
 
         foreach ($classToServices as $class => $service) {
-            switch ($package = substr($service, \strlen('notifier.transport_factory.'))) {
-                case 'fakechat': $package = 'fake-chat'; break;
-                case 'fakesms': $package = 'fake-sms'; break;
-                case 'freemobile': $package = 'free-mobile'; break;
-                case 'googlechat': $package = 'google-chat'; break;
-                case 'lightsms': $package = 'light-sms'; break;
-                case 'linkedin': $package = 'linked-in'; break;
-                case 'messagebird': $package = 'message-bird'; break;
-                case 'microsoftteams': $package = 'microsoft-teams'; break;
-                case 'ovhcloud': $package = 'ovh-cloud'; break;
-                case 'rocketchat': $package = 'rocket-chat'; break;
-                case 'smsbiuras': $package = 'sms-biuras'; break;
-                case 'spothit': $package = 'spot-hit'; break;
-            }
+            $package = substr($service, \strlen('notifier.transport_factory.'));
 
             if (!static::willBeAvailable(sprintf('symfony/%s-notifier', $package), $class, $parentPackages)) {
                 $container->removeDefinition($service);
+                $container->removeAlias(str_replace('-', '', $service)); // @deprecated to be removed in 6.0
             }
         }
 

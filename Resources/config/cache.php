@@ -2,6 +2,8 @@
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
 use Symfony\Component\Cache\Adapter\ApcuAdapter;
+use Symfony\Component\Cache\Adapter\DoctrineAdapter;
+use Symfony\Component\Cache\Adapter\DoctrineDbalAdapter;
 use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Cache\Adapter\MemcachedAdapter;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
@@ -50,6 +52,22 @@ return static function (ContainerConfigurator $container) {
         ->tag('cache.pool', ['clearer' => 'cache.default_clearer', 'reset' => 'reset'])
         ->tag('monolog.logger', ['channel' => 'cache'])
 
+        ->set('cache.adapter.doctrine', DoctrineAdapter::class)
+        ->abstract()
+        ->args([
+            abstract_arg('Doctrine provider service'),
+            '', // namespace
+            0, // default lifetime
+        ])
+        ->call('setLogger', [service('logger')->ignoreOnInvalid()])
+        ->tag('cache.pool', [
+            'provider' => 'cache.default_doctrine_provider',
+            'clearer' => 'cache.default_clearer',
+            'reset' => 'reset',
+        ])
+        ->tag('monolog.logger', ['channel' => 'cache'])
+        ->deprecate('symfony/framework-bundle', '5.4', 'The "%service_id%" service inherits from "cache.adapter.doctrine" which is deprecated.')
+
         ->set('cache.adapter.redis', RedisAdapter::class)
         ->abstract()
         ->args([
@@ -89,6 +107,26 @@ return static function (ContainerConfigurator $container) {
             param('kernel.debug'),
             sprintf('%s/%sDeprecations.log', param('kernel.build_dir'), param('kernel.container_class')),
         ])
-        ->tag('container.no_preload');
+        ->tag('container.no_preload')
+
+    ->set('cache.adapter.doctrine_dbal', DoctrineDbalAdapter::class)
+        ->abstract()
+        ->args([
+            abstract_arg('DBAL connection service'),
+            '', // namespace
+            0, // default lifetime
+            [], // table options
+            service('cache.default_marshaller')->ignoreOnInvalid(),
+        ])
+        ->call('setLogger', [service('logger')->ignoreOnInvalid()])
+        ->tag('cache.pool', [
+            'provider' => 'cache.default_doctrine_dbal_provider',
+            'clearer' => 'cache.default_clearer',
+            'reset' => 'reset',
+        ])
+        ->tag('monolog.logger', ['channel' => 'cache'])
+
+    ;
+
 };
 

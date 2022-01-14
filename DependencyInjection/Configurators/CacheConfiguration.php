@@ -7,6 +7,8 @@ use Symfony\Component\Cache\Adapter\AdapterInterface;
 use Symfony\Component\Cache\Adapter\ApcuAdapter;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\ChainAdapter;
+use Symfony\Component\Cache\Adapter\DoctrineAdapter;
+use Symfony\Component\Cache\Adapter\DoctrineDbalAdapter;
 use Symfony\Component\Cache\Adapter\MemcachedAdapter;
 use Symfony\Component\Cache\Adapter\TagAwareAdapter;
 use Symfony\Component\Cache\DependencyInjection\CachePoolPass;
@@ -57,6 +59,14 @@ class CacheConfiguration
             $container->removeDefinition('cache.adapter.memcached');
         }
 
+        if (!class_exists(DoctrineAdapter::class)) {
+            $container->removeDefinition('cache.adapter.doctrine');
+        }
+
+        if (!class_exists(DoctrineDbalAdapter::class)) {
+            $container->removeDefinition('cache.adapter.doctrine_dbal');
+        }
+
         if ($container->hasDefinition('cache.adapter.apcu')) {
             $container->getDefinition('cache.adapter.apcu')->replaceArgument(2, $version);
         }
@@ -71,7 +81,7 @@ class CacheConfiguration
             // Inline any env vars referenced in the parameter
             $container->setParameter('cache.prefix.seed', $container->resolveEnvPlaceholders($container->getParameter('cache.prefix.seed'), true));
         }
-        foreach (['doctrine', 'psr6', 'redis', 'memcached', 'pdo'] as $name) {
+        foreach (['doctrine', 'psr6', 'redis', 'memcached', 'doctrine_dbal', 'pdo'] as $name) {
             if (isset($config[$name = 'default_'.$name.'_provider'])) {
                 $container->setAlias('cache.'.$name, new Alias(CachePoolPass::getServiceProvider($container, $config[$name]), false));
             }

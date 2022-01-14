@@ -57,7 +57,7 @@ return static function (ContainerConfigurator $container) {
             ->parent('notifier.transport_factory.abstract')
             ->tag('chatter.transport_factory')
 
-        ->set('notifier.transport_factory.linkedin', LinkedInTransportFactory::class)
+        ->set('notifier.transport_factory.linked-in', LinkedInTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('chatter.transport_factory')
 
@@ -73,11 +73,11 @@ return static function (ContainerConfigurator $container) {
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
-        ->set('notifier.transport_factory.rocketchat', RocketChatTransportFactory::class)
+        ->set('notifier.transport_factory.rocket-chat', RocketChatTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('chatter.transport_factory')
 
-        ->set('notifier.transport_factory.googlechat', GoogleChatTransportFactory::class)
+        ->set('notifier.transport_factory.google-chat', GoogleChatTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('chatter.transport_factory')
 
@@ -93,23 +93,23 @@ return static function (ContainerConfigurator $container) {
             ->parent('notifier.transport_factory.abstract')
             ->tag('chatter.transport_factory')
 
-        ->set('notifier.transport_factory.freemobile', FreeMobileTransportFactory::class)
+        ->set('notifier.transport_factory.free-mobile', FreeMobileTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
-        ->set('notifier.transport_factory.spothit', SpotHitTransportFactory::class)
+        ->set('notifier.transport_factory.spot-hit', SpotHitTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
-        ->set('notifier.transport_factory.fakechat', FakeChatTransportFactory::class)
+        ->set('notifier.transport_factory.fake-chat', FakeChatTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('chatter.transport_factory')
 
-        ->set('notifier.transport_factory.fakesms', FakeSmsTransportFactory::class)
+        ->set('notifier.transport_factory.fake-sms', FakeSmsTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
-        ->set('notifier.transport_factory.ovhcloud', OvhCloudTransportFactory::class)
+        ->set('notifier.transport_factory.ovh-cloud', OvhCloudTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
@@ -121,7 +121,7 @@ return static function (ContainerConfigurator $container) {
             ->parent('notifier.transport_factory.abstract')
             ->tag('chatter.transport_factory')
 
-        ->set('notifier.transport_factory.infobip', InfobipTransportFactory::class)
+        ->set('notifier.transport_factory.info-bip', InfobipTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
@@ -129,7 +129,7 @@ return static function (ContainerConfigurator $container) {
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
-        ->set('notifier.transport_factory.smsapi', SmsapiTransportFactory::class)
+        ->set('notifier.transport_factory.sms-api', SmsapiTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
@@ -153,11 +153,11 @@ return static function (ContainerConfigurator $container) {
             ->parent('notifier.transport_factory.abstract')
             ->tag('chatter.transport_factory')
 
-        ->set('notifier.transport_factory.microsoftteams', MicrosoftTeamsTransportFactory::class)
+        ->set('notifier.transport_factory.microsoft-teams', MicrosoftTeamsTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('chatter.transport_factory')
 
-        ->set('notifier.transport_factory.gatewayapi', GatewayApiTransportFactory::class)
+        ->set('notifier.transport_factory.gateway-api', GatewayApiTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
@@ -178,15 +178,15 @@ return static function (ContainerConfigurator $container) {
             ->tag('chatter.transport_factory')
             ->tag('texter.transport_factory')
 
-        ->set('notifier.transport_factory.lightsms', LightSmsTransportFactory::class)
+        ->set('notifier.transport_factory.light-sms', LightSmsTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
-        ->set('notifier.transport_factory.smsbiuras', SmsBiurasTransportFactory::class)
+        ->set('notifier.transport_factory.sms-biuras', SmsBiurasTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
 
-        ->set('notifier.transport_factory.messagebird', MessageBirdTransportFactory::class)
+        ->set('notifier.transport_factory.message-bird', MessageBirdTransportFactory::class)
             ->parent('notifier.transport_factory.abstract')
             ->tag('texter.transport_factory')
     ;
